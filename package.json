@@ -28,7 +28,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "prepublish": "tsc"
+    "prepare": "tsc"
   },
   "dependencies": {
     "backbone": "^1.4.0",
