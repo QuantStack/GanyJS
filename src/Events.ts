@@ -1,4 +1,4 @@
-import * as Backbone from 'backbone';
+const Backbone: any = require('backbone');
 
 
 /**
