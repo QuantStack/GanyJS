@@ -27,7 +27,8 @@
     "url": "https://github.com/martinRenou/GanyJS"
   },
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "prepublish": "tsc"
   },
   "dependencies": {
     "backbone": "^1.4.0",
