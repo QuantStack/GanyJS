@@ -33,7 +33,7 @@ class Scene {
   }
 
   /**
-   * Add an Odysis block to the scene
+   * Add an GanyJS block to the scene
    */
   addChild (block: Block) {
     this.blocks.push(block);
