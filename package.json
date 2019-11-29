@@ -8,9 +8,9 @@
     "visualization",
     "threejs"
   ],
-  "homepage": "https://github.com/martinRenou/GanyJS",
+  "homepage": "https://github.com/QuantStack/GanyJS",
   "bugs": {
-    "url": "https://github.com/martinRenou/GanyJS/issues"
+    "url": "https://github.com/QuantStack/GanyJS/issues"
   },
   "license": "BSD-3-Clause",
   "author": {
@@ -21,7 +21,7 @@
   "types": "lib/index.d.ts",
   "repository": {
     "type": "git",
-    "url": "https://github.com/martinRenou/GanyJS"
+    "url": "https://github.com/QuantStack/GanyJS"
   },
   "scripts": {
     "build": "tsc",
