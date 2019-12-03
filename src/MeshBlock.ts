@@ -22,12 +22,12 @@ class PolyMesh extends Block {
   constructor (vertices: Float32Array, triangleIndices: Uint32Array, data: Data[], options?: BlockOptions) {
     super(vertices, data, options);
 
-    this.triangleIndices = triangleIndices;
+    this._triangleIndices = triangleIndices;
 
     this.geometry = new THREE.BufferGeometry();
 
-    const vertexBuffer = new THREE.BufferAttribute(this.vertices, 3);
-    const indexBuffer = new THREE.BufferAttribute(this.triangleIndices, 1);
+    const vertexBuffer = new THREE.BufferAttribute(vertices, 3);
+    const indexBuffer = new THREE.BufferAttribute(triangleIndices, 1);
 
     this.geometry.setAttribute('position', vertexBuffer);
     this.geometry.setIndex(indexBuffer);
@@ -47,12 +47,27 @@ class PolyMesh extends Block {
     this.mesh.vertices = this.vertices;
   }
 
+  /**
+   * Update index buffers
+   */
+  handleTriangleIndicesChange () {
+    super.handleTriangleIndicesChange();
+
+    if (this.triangleIndices == null) {
+      this.geometry.copy(this.geometry.toNonIndexed());
+    } else {
+      const indexBuffer = new THREE.BufferAttribute(this.triangleIndices, 1);
+      this.geometry.setIndex(indexBuffer);
+    }
+
+  }
+
   get boundingSphere () : THREE.Sphere {
     this.geometry.computeBoundingSphere();
     return this.geometry.boundingSphere;
   }
 
-  triangleIndices: Uint32Array;
+  _triangleIndices: Uint32Array;
 
   geometry: THREE.BufferGeometry;
 
