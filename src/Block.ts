@@ -73,6 +73,22 @@ abstract class Block extends Events {
   }
 
   /**
+   * Set triangleIndices buffers
+   */
+  set triangleIndices (triangleIndices: Uint32Array | null) {
+    this._triangleIndices = triangleIndices;
+
+    this.handleTriangleIndicesChange();
+  }
+
+  /**
+   * Get triangleIndices buffer
+   */
+  get triangleIndices () {
+    return this._triangleIndices;
+  }
+
+  /**
    * Set data list
    */
   set data (value: Data[]) {
@@ -169,6 +185,9 @@ abstract class Block extends Events {
   handleVerticesChange () {
   }
 
+  handleTriangleIndicesChange () {
+  }
+
   handleCameraMoveEnd (cameraPosition: THREE.Vector3) {
     this.lastCameraPosition = cameraPosition;
   }
@@ -182,7 +201,7 @@ abstract class Block extends Events {
   private _vertices: Float32Array;
   private _data: Data[];
 
-  triangleIndices: null | Uint32Array = null;
+  _triangleIndices: null | Uint32Array = null;
   tetrahedronIndices: null | Uint32Array = null;
 
   meshes: NodeMesh[] = [];
