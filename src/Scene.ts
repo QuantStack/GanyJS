@@ -128,8 +128,16 @@ class Renderer {
     this.controls.screen.height = height;
   }
 
-  set backgroundColor(color: string) {
-    this.renderer.setClearColor(new THREE.Color(color));
+  set backgroundColor (color: string) {
+    this.color = color;
+
+    this.renderer.setClearColor(new THREE.Color(this.color), this.opacity);
+  }
+
+  set backgroundOpacity (opacity: number) {
+    this.opacity = opacity;
+
+    this.renderer.setClearColor(new THREE.Color(this.color), this.opacity);
   }
 
   /**
@@ -181,5 +189,8 @@ class Renderer {
   materialVersions: { [keys: string]: number; } = {};
 
   private animationID: number;
+
+  private color: string;
+  private opacity: number;
 
 }
