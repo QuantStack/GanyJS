@@ -140,6 +140,30 @@ class Renderer {
     this.renderer.setClearColor(new THREE.Color(this.color), this.opacity);
   }
 
+  set cameraPosition (position: THREE.Vector3) {
+    this.camera.position.set(position.x, position.y, position.z);
+  }
+
+  get cameraPosition () {
+    return this.camera.position;
+  }
+
+  set cameraUp (position: THREE.Vector3) {
+    this.camera.up.set(position.x, position.y, position.z);
+  }
+
+  get cameraUp () {
+    return this.camera.position;
+  }
+
+  set cameraTarget (position: THREE.Vector3) {
+    this.controls.target.set(position.x, position.y, position.z);
+  }
+
+  get cameraTarget () {
+    return this.controls.target;
+  }
+
   /**
    * Animation
    */
