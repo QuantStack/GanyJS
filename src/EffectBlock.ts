@@ -107,6 +107,17 @@ class Effect extends Block {
   }
 
   /**
+   * Add transform node to materials
+   */
+  addTransformNode (operation: NodeOperation, transformNode: Nodes.Node) {
+    for (const nodeMesh of this.meshes) {
+      nodeMesh.addTransformNode(operation, transformNode);
+    }
+
+    this.buildMaterial();
+  }
+
+  /**
    * Add color node to materials
    */
   addColorNode (operation: NodeOperation, colorNode: Nodes.Node) {

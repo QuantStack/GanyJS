@@ -121,9 +121,13 @@ class NodeMesh {
   }
 
   buildMaterial () {
-    let position = new Nodes.PositionNode();
+    let position: NodeOperationResult<Nodes.Node> = new Nodes.PositionNode();
     let alpha: NodeOperationResult<Nodes.Node> = new Nodes.FloatNode(1.);
     let color: NodeOperationResult<Nodes.Node> = this.defaultColorNode;
+
+    for (const transformOperator of this.transformOperators) {
+      position = transformOperator.operate(position);
+    }
 
     for (const colorOperator of this.colorOperators) {
       color = colorOperator.operate(color);
@@ -133,13 +137,11 @@ class NodeMesh {
       alpha = alphaOperator.operate(alpha);
     }
 
-    // TODO: Same for position Node, alpha Node and varyings
-
     this.material.flatShading = true;
     this.material.side = THREE.DoubleSide;
 
     // @ts-ignore
-    this.material.transform = position;
+    this.material.position = position;
     // @ts-ignore
     this.material.alpha = alpha;
     // @ts-ignore
@@ -164,7 +166,7 @@ class NodeMesh {
 
     copy.hasIndex = this.hasIndex;
 
-    // TODO: Copy other operators
+    copy.transformOperators = this.transformOperators.slice();
     copy.alphaOperators = this.alphaOperators.slice();
     copy.colorOperators = this.colorOperators.slice();
 
@@ -174,7 +176,7 @@ class NodeMesh {
   }
 
   copyMaterial (other: NodeMesh) {
-    // TODO: Copy other operators
+    this.transformOperators = other.transformOperators.slice();
     this.alphaOperators = other.alphaOperators.slice();
     this.colorOperators = other.colorOperators.slice();
 
@@ -198,6 +200,13 @@ class NodeMesh {
 
   get defaultColor () {
     return this._defaultColor;
+  }
+
+  /**
+   * Add a Transform node to this mesh material
+   */
+  addTransformNode (operation: NodeOperation, transformNode: Nodes.Node) {
+    this.transformOperators.push(new NodeOperator<Nodes.Node>(operation, transformNode));
   }
 
   /**
@@ -297,7 +306,7 @@ class NodeMesh {
 
   private meshCtor: MeshConstructor;
 
-  // private transformOperators: NodeOperator<Nodes.TransformNode>[];
+  private transformOperators: NodeOperator<Nodes.Node>[] = [];
   private alphaOperators: NodeOperator<Nodes.Node>[] = [];
   private colorOperators: NodeOperator<Nodes.Node>[] = [];
 
