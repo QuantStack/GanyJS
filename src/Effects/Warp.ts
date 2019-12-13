@@ -13,16 +13,22 @@ import {
 } from '../NodeMesh';
 
 
+/**
+ * Transform the vertices positions. The new vertice position is equal to `factor * (offset + input) + initialPosition`
+ **/
 export
 class Warp extends Effect {
 
-  constructor (parent: Block, input: Input, factor: number) {
+  constructor (parent: Block, input: Input, factor: THREE.Vector3, offset: THREE.Vector3) {
     super(parent, input);
 
-    this.factorNode = new Nodes.FloatNode(factor);
+    this.offsetNode = new Nodes.Vector3Node(offset.x, offset.y, offset.z);
+    this.factorNode = new Nodes.Vector3Node(factor.x, factor.y, factor.z);
+
+    this.intermediateTransformNode = new Nodes.OperatorNode(this.offsetNode, this.inputNode, Nodes.OperatorNode.ADD);
 
     this.transformNode = new Nodes.OperatorNode(
-      this.inputNode,
+      this.intermediateTransformNode,
       this.factorNode,
       Nodes.OperatorNode.MUL
     );
@@ -38,13 +44,21 @@ class Warp extends Effect {
     super.setInput(input);
 
     if (this.initialized) {
-      this.transformNode.a = this.inputNode;
+      this.intermediateTransformNode.b = this.inputNode;
 
       this.buildMaterial();
     }
   }
 
-  set factor (value: number) {
+  set offset (value: THREE.Vector3) {
+    this.offsetNode.value = value;
+  }
+
+  get offset () {
+    return this.offsetNode.value;
+  }
+
+  set factor (value: THREE.Vector3) {
     this.factorNode.value = value;
   }
 
@@ -58,7 +72,9 @@ class Warp extends Effect {
 
   private initialized: boolean = false;
 
-  private factorNode: Nodes.FloatNode;
+  private offsetNode: Nodes.Vector3Node;
+  private factorNode: Nodes.Vector3Node;
+  private intermediateTransformNode: Nodes.OperatorNode;
   private transformNode: Nodes.OperatorNode;
 
   protected inputNode: Nodes.Node;
