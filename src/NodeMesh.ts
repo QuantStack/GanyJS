@@ -16,7 +16,7 @@ enum NodeOperation {
 }
 
 export
-type MeshConstructor = new (geometry: THREE.BufferGeometry, material: Nodes.StandardNodeMaterial) => THREE.Mesh;
+type MeshConstructor = new (geometry: THREE.BufferGeometry, material: Nodes.StandardNodeMaterial) => THREE.Object3D;
 
 export
 type NodeOperationResult<T extends Nodes.Node> = T | Nodes.OperatorNode;
@@ -144,6 +144,12 @@ class NodeMesh {
     this.material.alpha = alpha;
     // @ts-ignore
     this.material.color = color;
+
+    // Workaround for https://github.com/mrdoob/three.js/issues/18152
+    if (this.mesh.type == 'Points') {
+      // @ts-ignore
+      this.material.normal = new Nodes.Vector3Node(1, 1, 1);
+    }
 
     this.material.alphaTest = 0.1;
 
@@ -285,8 +291,8 @@ class NodeMesh {
   }
 
   geometry: THREE.BufferGeometry;
-  material: Nodes.StandardNodeMaterial;
-  mesh: THREE.Mesh;
+  material: Nodes.NodeMaterial;
+  mesh: THREE.Object3D;
   readonly data: Data[];
 
   private meshCtor: MeshConstructor;
