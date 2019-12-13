@@ -91,3 +91,45 @@ class TetraMesh extends PolyMesh {
   tetrahedronIndices: Uint32Array;
 
 }
+
+
+/**
+ * PointCloud class
+ */
+export
+class PointCloud extends Block {
+
+  constructor (vertices: Float32Array, data: Data[], options?: BlockOptions) {
+    super(vertices, data, options);
+
+    this.geometry = new THREE.BufferGeometry();
+
+    const vertexBuffer = new THREE.BufferAttribute(vertices, 3);
+
+    this.geometry.setAttribute('position', vertexBuffer);
+
+    this.mesh = new NodeMesh(THREE.Points, this.geometry, this.data);
+    this.meshes.push(this.mesh);
+
+    this.buildMaterial();
+  }
+
+  /**
+   * Update vertices buffers
+   */
+  handleVerticesChange () {
+    super.handleVerticesChange();
+
+    this.mesh.vertices = this.vertices;
+  }
+
+  get boundingSphere () : THREE.Sphere {
+    this.geometry.computeBoundingSphere();
+    return this.geometry.boundingSphere;
+  }
+
+  geometry: THREE.BufferGeometry;
+
+  mesh: NodeMesh;
+
+}
