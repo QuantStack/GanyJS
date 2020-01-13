@@ -31,11 +31,11 @@
     "backbone": "^1.4.0",
     "binary-search-tree": "^0.2.6",
     "jquery": "^3.4.1",
-    "three": "^0.110.0",
+    "three": "^0.112.0",
     "uuid": "^3.3.3"
   },
   "devDependencies": {
-    "@types/node": "^10.11.6",
+    "@types/node": "^10.17.13",
     "typescript": "~3.1.2"
   }
 }
