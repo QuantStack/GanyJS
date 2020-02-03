@@ -1,4 +1,5 @@
 export * from './Alpha';
+export * from './RGB';
 
 export * from './IsoColor';
 
