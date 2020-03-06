@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import * as Nodes from 'three/examples/jsm/nodes/Nodes';
 
 import {
   TrackballControls
@@ -169,21 +168,6 @@ class Renderer {
    */
   private animate () {
     this.animationID = window.requestAnimationFrame(this.animate.bind(this));
-
-    // This is a workaround for github.com/mrdoob/three.js/issues/12132
-    for (const child of this.scene.scene.children) {
-      if (child instanceof THREE.Mesh && child.material instanceof Nodes.StandardNodeMaterial) {
-        const id = child.material.uuid;
-        // @ts-ignore
-        const version = child.material.version
-
-        if (id in this.materialVersions && this.materialVersions[id] != version) {
-          child.material.needsUpdate = true;
-        }
-
-        this.materialVersions[id] = version;
-      }
-    }
 
     this.renderer.render(this.scene.scene, this.camera);
 

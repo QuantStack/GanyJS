@@ -80,9 +80,6 @@ class NodeMesh {
 
     this.hasIndex = this.geometry.index != null;
 
-    // @ts-ignore: Monkey patching material, workaround for github.com/mrdoob/three.js/issues/12132
-    this.material.version = 0;
-
     this.mesh = new T(geometry, this.material);
 
     // We need to set this to false because we directly play with the position matrix
@@ -140,11 +137,8 @@ class NodeMesh {
     this.material.flatShading = true;
     this.material.side = THREE.DoubleSide;
 
-    // @ts-ignore
     this.material.position = position;
-    // @ts-ignore
     this.material.alpha = alpha;
-    // @ts-ignore
     this.material.color = color;
 
     // Workaround for https://github.com/mrdoob/three.js/issues/18152
@@ -156,9 +150,6 @@ class NodeMesh {
     this.material.alphaTest = 0.1;
 
     this.material.build();
-
-    // @ts-ignore
-    this.material.version++;
   }
 
   copy () {
@@ -237,7 +228,7 @@ class NodeMesh {
       const vertex = this.geometry.getAttribute('position').array;
 
       let indices: ArrayLike<number>;
-      if (this.hasIndex) {
+      if (this.hasIndex && this.geometry.index !== null) {
         indices = this.geometry.index.array;
       } else {
         indices = Array.from(Array(vertex.length / 3).keys());
@@ -284,7 +275,7 @@ class NodeMesh {
         newIndices[3 * i + 2] = indices[3 * triangleIndex + 2]
       }
 
-      if (this.hasIndex) {
+      if (this.hasIndex && this.geometry.index !== null) {
         this.geometry.index.set(newIndices);
         this.geometry.index.needsUpdate = true;
       } else {
@@ -300,7 +291,7 @@ class NodeMesh {
   }
 
   geometry: THREE.BufferGeometry;
-  material: Nodes.NodeMaterial;
+  material: Nodes.StandardNodeMaterial;
   mesh: THREE.Object3D;
   readonly data: Data[];
 
