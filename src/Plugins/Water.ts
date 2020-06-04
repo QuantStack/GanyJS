@@ -144,12 +144,14 @@ class Water extends Effect {
     // TODO Use the same directional light as the scene?
     const light = [0., 0., -1.];
 
+    // Initialize environment mapping shaders
     this.envMappingTarget = new THREE.WebGLRenderTarget(this.envMapSize, this.envMapSize, {type: THREE.FloatType});
     this.envMappingMaterial = new THREE.ShaderMaterial({
       vertexShader: envMappingVertex,
       fragmentShader: envMappingFragment,
     });
 
+    // Initialize water caustics shaders
     this.causticsTarget = new THREE.WebGLRenderTarget(this.causticsSize, this.causticsSize, {type: THREE.FloatType});
     this.causticsMaterial = new THREE.ShaderMaterial({
       uniforms: {
@@ -165,7 +167,16 @@ class Water extends Effect {
       }
     });
 
-    // this.rendererHook =
+    // Create water geometry
+    this.waterGeometry = new THREE.BufferGeometry();
+
+    const vertexBuffer = new THREE.BufferAttribute(parent.vertices, 3);
+    this.waterGeometry.setAttribute('position', vertexBuffer);
+
+    this.waterGeometry.computeVertexNormals();
+
+    // Initialize renderer hook, this hook updates the caustics texture
+    this.rendererHook = this._rendererHook;
   }
 
   /**
@@ -177,6 +188,19 @@ class Water extends Effect {
     // TODO Add the water mesh
   }
 
+  /**
+   * Update the caustics texture if needed.
+   */
+  _rendererHook (renderer: THREE.WebGLRenderer): void {
+    if (this.needsUpdate) {
+      // TODO Update environment map texture
+
+      // TODO Render caustics texture
+    }
+  }
+
+  private needsUpdate: boolean = false;
+
   private envMapSize: number = 256;
   private envMappingTarget: THREE.WebGLRenderTarget;
   private envMappingMaterial: THREE.ShaderMaterial;
@@ -184,5 +208,7 @@ class Water extends Effect {
   private causticsSize: number = 512;
   private causticsTarget: THREE.WebGLRenderTarget;
   private causticsMaterial: THREE.ShaderMaterial;
+
+  private waterGeometry: THREE.BufferGeometry;
 
 }
