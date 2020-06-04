@@ -176,7 +176,7 @@ class Water extends Effect {
     this.waterGeometry.computeVertexNormals();
 
     // Initialize renderer hook, this hook updates the caustics texture
-    this.rendererHook = this._rendererHook;
+    this.beforeRenderHook = this._beforeRenderHook;
   }
 
   /**
@@ -191,7 +191,7 @@ class Water extends Effect {
   /**
    * Update the caustics texture if needed.
    */
-  _rendererHook (renderer: THREE.WebGLRenderer): void {
+  _beforeRenderHook (renderer: THREE.WebGLRenderer): void {
     if (this.needsUpdate) {
       // TODO Update environment map texture
 

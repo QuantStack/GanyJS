@@ -170,8 +170,8 @@ class Renderer {
     this.animationID = window.requestAnimationFrame(this.animate.bind(this));
 
     for (const block of this.scene.blocks) {
-      if (block.rendererHook !== null) {
-        block.rendererHook(this.renderer);
+      if (block.beforeRenderHook !== null) {
+        block.beforeRenderHook(this.renderer);
       }
     }
 
