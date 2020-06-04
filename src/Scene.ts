@@ -176,6 +176,8 @@ class Renderer {
     }
 
     this.renderer.setRenderTarget(null);
+    this.renderer.setClearColor(new THREE.Color(this.color), this.opacity);
+
     this.renderer.render(this.scene.scene, this.camera);
 
     this.controls.update();

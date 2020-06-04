@@ -144,20 +144,27 @@ class Water extends Effect {
     // TODO Use the same directional light as the scene?
     const light = [0., 0., -1.];
 
-    // Initialize environment mapping shaders
+    // Initialize environment mapping
     this.envMappingTarget = new THREE.WebGLRenderTarget(this.envMapSize, this.envMapSize, {type: THREE.FloatType});
     this.envMappingMaterial = new THREE.ShaderMaterial({
       vertexShader: envMappingVertex,
       fragmentShader: envMappingFragment,
     });
 
-    // Initialize water caustics shaders
+    this.envMappingMeshes = [];
+    this.environmentMeshes = [];
+    for (const envMesh of parent.options.environmentMeshes) {
+      this.envMappingMeshes.push(new THREE.Mesh(envMesh.geometry, this.envMappingMaterial));
+      // this.environmentMeshes.push(new THREE.Mesh(envMesh.geometry, this.environmentMaterial))
+    }
+
+    // Initialize water caustics
     this.causticsTarget = new THREE.WebGLRenderTarget(this.causticsSize, this.causticsSize, {type: THREE.FloatType});
     this.causticsMaterial = new THREE.ShaderMaterial({
       uniforms: {
         light: { value: light },
         envMap: { value: null },
-        deltaEnvMapTexture: { value: null },
+        deltaEnvMapTexture: { value: 1. / this.envMapSize },
       },
       vertexShader: causticsVertex,
       fragmentShader: causticsFragment,
@@ -167,13 +174,14 @@ class Water extends Effect {
       }
     });
 
-    // Create water geometry
     this.waterGeometry = new THREE.BufferGeometry();
 
     const vertexBuffer = new THREE.BufferAttribute(parent.vertices, 3);
     this.waterGeometry.setAttribute('position', vertexBuffer);
 
     this.waterGeometry.computeVertexNormals();
+
+    this.causticsMesh = new THREE.Mesh(this.waterGeometry, this.causticsMaterial);
 
     // Initialize renderer hook, this hook updates the caustics texture
     this.beforeRenderHook = this._beforeRenderHook;
@@ -192,14 +200,29 @@ class Water extends Effect {
    * Update the caustics texture if needed.
    */
   _beforeRenderHook (renderer: THREE.WebGLRenderer): void {
-    if (this.needsUpdate) {
-      // TODO Update environment map texture
+    if (this.causticsNeedsUpdate) {
+      // Update environment map texture
+      renderer.setRenderTarget(this.envMappingTarget);
+      renderer.setClearColor(black, 0);
+      renderer.clear();
 
-      // TODO Render caustics texture
+      for (const mesh of this.envMappingMeshes) {
+        renderer.render(mesh, this.lightCamera);
+      }
+
+      // Render caustics texture
+      this.causticsMaterial.uniforms['envMap'].value = this.envMappingTarget.texture;
+
+      renderer.setRenderTarget(this.causticsTarget);
+      renderer.clear();
+
+      renderer.render(this.causticsMesh, this.lightCamera);
+
+      this.causticsNeedsUpdate = false;
     }
   }
 
-  private needsUpdate: boolean = false;
+  private causticsNeedsUpdate: boolean = true;
 
   private envMapSize: number = 256;
   private envMappingTarget: THREE.WebGLRenderTarget;
