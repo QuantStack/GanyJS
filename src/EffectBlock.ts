@@ -61,7 +61,6 @@ class Effect extends Block {
    */
   setInput (input?: Input) : void {
     if (this.inputDimension == 0) {
-      // Do nothing (Maybe throw?)
       return;
     }
 

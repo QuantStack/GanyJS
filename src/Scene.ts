@@ -34,7 +34,7 @@ class Scene {
   /**
    * Add an GanyJS block to the scene
    */
-  addChild (block: Block) {
+  addBlock (block: Block) {
     this.blocks.push(block);
     block.addToScene(this.scene);
   }
@@ -169,6 +169,13 @@ class Renderer {
   private animate () {
     this.animationID = window.requestAnimationFrame(this.animate.bind(this));
 
+    for (const block of this.scene.blocks) {
+      if (block.rendererHook !== null) {
+        block.rendererHook(this.renderer);
+      }
+    }
+
+    this.renderer.setRenderTarget(null);
     this.renderer.render(this.scene.scene, this.camera);
 
     this.controls.update();
