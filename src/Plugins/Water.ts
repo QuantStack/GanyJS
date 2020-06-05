@@ -8,6 +8,8 @@ import {
   Block
 } from '../Block';
 
+const black = new THREE.Color('black');
+
 
 // Environment mapping shaders
 const envMappingVertex = `
