@@ -258,10 +258,10 @@ class Water extends Effect {
     });
 
     this.envMappingMeshes = [];
-    this.environmentMeshes = [];
+    this._environmentMeshes = [];
     for (const envMesh of parent.options.environmentMeshes) {
       this.envMappingMeshes.push(new THREE.Mesh(envMesh.geometry, this.envMappingMaterial));
-      this.environmentMeshes.push(new THREE.Mesh(envMesh.geometry, this.envMaterial));
+      this._environmentMeshes.push(new THREE.Mesh(envMesh.geometry, this.envMaterial));
     }
 
     // Initialize water caustics
@@ -325,6 +325,7 @@ class Water extends Effect {
       renderer.clear();
 
       for (const mesh of this.envMappingMeshes) {
+        // @ts-ignore: Until https://github.com/mrdoob/three.js/pull/19564 is released
         renderer.render(mesh, this.lightCamera);
       }
 
@@ -334,6 +335,7 @@ class Water extends Effect {
       renderer.setRenderTarget(this.causticsTarget);
       renderer.clear();
 
+      // @ts-ignore: Until https://github.com/mrdoob/three.js/pull/19564 is released
       renderer.render(this.causticsMesh, this.lightCamera);
 
       this.envMaterial.uniforms['caustics'].value = this.causticsTarget.texture;
@@ -349,10 +351,17 @@ class Water extends Effect {
   private envMapSize: number = 256;
   private envMappingTarget: THREE.WebGLRenderTarget;
   private envMappingMaterial: THREE.ShaderMaterial;
+  private envMappingMeshes: THREE.Mesh[];
+
+  private envMaterial: THREE.ShaderMaterial;
 
   private causticsSize: number = 512;
   private causticsTarget: THREE.WebGLRenderTarget;
   private causticsMaterial: THREE.ShaderMaterial;
+  private causticsMesh: THREE.Mesh;
+
+  private waterMaterial: THREE.ShaderMaterial;
+  private waterMesh: THREE.Mesh;
 
   private waterGeometry: THREE.BufferGeometry;
 
