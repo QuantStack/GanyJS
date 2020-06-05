@@ -141,8 +141,13 @@ class Water extends Effect {
   constructor (parent: Block) {
     super(parent);
 
+    // Initialize the light camera
     // TODO Use the same directional light as the scene?
+    // TODO Use meaningful default values for the clip planes
     const light = [0., 0., -1.];
+    this.lightCamera = new THREE.OrthographicCamera(-1.2, 1.2, 1.2, -1.2, 0., 5.);
+    lightCamera.position.set(-2 * light[0], -2 * light[1], -2 * light[2]);
+    lightCamera.lookAt(0, 0, 0);
 
     // Initialize environment mapping
     this.envMappingTarget = new THREE.WebGLRenderTarget(this.envMapSize, this.envMapSize, {type: THREE.FloatType});
@@ -221,6 +226,8 @@ class Water extends Effect {
       this.causticsNeedsUpdate = false;
     }
   }
+
+  private lightCamera: THREE.OrthographicCamera;
 
   private causticsNeedsUpdate: boolean = true;
 
