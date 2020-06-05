@@ -9,6 +9,7 @@ import {
 } from '../Block';
 
 
+// Environment mapping shaders
 const envMappingVertex = `
 varying vec4 worldPosition;
 varying float depth;
@@ -39,6 +40,7 @@ void main() {
 `;
 
 
+// Caustics shaders
 const causticsVertex = `
 uniform vec3 light;
 
@@ -131,6 +133,62 @@ void main() {
 `;
 
 
+// Environment shaders
+const envVertex = `
+uniform vec3 light;
+
+// Light projection matrix
+uniform mat4 lightProjectionMatrix;
+uniform mat4 lightViewMatrix;
+
+varying float lightIntensity;
+varying vec3 lightPosition;
+
+
+void main(void){
+  lightIntensity = - dot(light, normalize(normal));
+
+  // Compute position in the light coordinates system, this will be used for
+  // comparing fragment depth with the caustics texture
+  vec4 lightRelativePosition = lightProjectionMatrix * lightViewMatrix * modelMatrix * vec4(position, 1.);
+  lightPosition = 0.5 + lightRelativePosition.xyz / lightRelativePosition.w * 0.5;
+
+  // The position of the vertex
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.);
+}
+`;
+
+const envFragment = `
+uniform sampler2D caustics;
+
+varying float lightIntensity;
+varying vec3 lightPosition;
+
+const float bias = 0.005;
+
+const vec3 underwaterColor = vec3(0.4, 0.9, 1.0);
+
+
+void main() {
+  // Set the frag color
+  float computedLightIntensity = 0.5;
+
+  computedLightIntensity += 0.2 * lightIntensity;
+
+  // Retrieve caustics information
+  vec2 causticsInfo = texture2D(caustics, lightPosition.xy).zw;
+  float causticsIntensity = causticsInfo.x;
+  float causticsDepth = causticsInfo.y;
+
+  if (causticsDepth > lightPosition.z - bias) {
+    computedLightIntensity += causticsIntensity;
+  }
+
+  gl_FragColor = vec4(underwaterColor * computedLightIntensity, 1.);
+}
+`;
+
+
 /**
  * Displays beautiful water with real-time caustics.
  **/
@@ -149,18 +207,23 @@ class Water extends Effect {
     lightCamera.position.set(-2 * light[0], -2 * light[1], -2 * light[2]);
     lightCamera.lookAt(0, 0, 0);
 
-    // Initialize environment mapping
+    // Initialize environment mapping and environment material
     this.envMappingTarget = new THREE.WebGLRenderTarget(this.envMapSize, this.envMapSize, {type: THREE.FloatType});
     this.envMappingMaterial = new THREE.ShaderMaterial({
       vertexShader: envMappingVertex,
       fragmentShader: envMappingFragment,
     });
 
+    this.envMaterial = new THREE.ShaderMaterial({
+      vertexShader: envVertex,
+      fragmentShader: envFragment,
+    });
+
     this.envMappingMeshes = [];
     this.environmentMeshes = [];
     for (const envMesh of parent.options.environmentMeshes) {
       this.envMappingMeshes.push(new THREE.Mesh(envMesh.geometry, this.envMappingMaterial));
-      // this.environmentMeshes.push(new THREE.Mesh(envMesh.geometry, this.environmentMaterial))
+      this.environmentMeshes.push(new THREE.Mesh(envMesh.geometry, this.envMaterial));
     }
 
     // Initialize water caustics
