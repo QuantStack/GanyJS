@@ -203,8 +203,8 @@ class Water extends Effect {
     this.meshes = [];
 
     // Initialize the light camera
-    // TODO Use the same directional light as the scene?
-    // TODO Use meaningful default values for the clip planes
+    // TODO Use the same directional light as the scene
+    // TODO Compute clip planes values depending on the mesh + env bounding box
     const light = [0., 0., -1.];
     this.lightCamera = new THREE.OrthographicCamera(-1.2, 1.2, 1.2, -1.2, 0., 5.);
     lightCamera.position.set(-2 * light[0], -2 * light[1], -2 * light[2]);
