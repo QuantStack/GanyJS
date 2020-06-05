@@ -189,6 +189,35 @@ void main() {
 `;
 
 
+// Water shaders
+const waterVertex = `
+varying vec3 norm;
+
+
+void main() {
+  // Interpolate normals
+  norm = normal;
+
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}
+`;
+
+const waterFragment = `
+uniform vec3 light;
+
+varying vec3 norm;
+
+
+void main() {
+  float light_intensity = - dot(light, norm);
+
+  vec3 color = vec3(0.45, 0.64, 0.74);
+
+  gl_FragColor = vec4(color * light_intensity, 0.7);
+}
+`;
+
+
 /**
  * Displays beautiful water with real-time caustics.
  **/
@@ -254,6 +283,18 @@ class Water extends Effect {
 
     this.causticsMesh = new THREE.Mesh(this.waterGeometry, this.causticsMaterial);
 
+    // Initialize water mesh
+    this.waterMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        light: { value: light },
+      },
+      vertexShader: waterVertex,
+      fragmentShader: waterFragment,
+      side: THREE.DoubleSide
+    });
+
+    this.waterMesh = new THREE.Mesh(this.waterGeometry, this.waterMaterial);
+
     // Initialize renderer hook, this hook updates the caustics texture
     this.beforeRenderHook = this._beforeRenderHook;
   }
@@ -264,7 +305,7 @@ class Water extends Effect {
   addToScene (scene: THREE.Scene) {
     super.addToScene(scene);
 
-    // TODO Add the water mesh
+    scene.add(this.waterMesh);
   }
 
   /**
