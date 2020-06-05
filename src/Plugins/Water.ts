@@ -199,6 +199,9 @@ class Water extends Effect {
   constructor (parent: Block) {
     super(parent);
 
+    // Remove meshes, only the water and the environment will stay
+    this.meshes = [];
+
     // Initialize the light camera
     // TODO Use the same directional light as the scene?
     // TODO Use meaningful default values for the clip planes
