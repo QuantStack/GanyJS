@@ -236,8 +236,8 @@ class Water extends Effect {
     // TODO Compute clip planes values depending on the mesh + env bounding box
     const light = [0., 0., -1.];
     this.lightCamera = new THREE.OrthographicCamera(-1.2, 1.2, 1.2, -1.2, 0., 5.);
-    lightCamera.position.set(-2 * light[0], -2 * light[1], -2 * light[2]);
-    lightCamera.lookAt(0, 0, 0);
+    this.lightCamera.position.set(-2 * light[0], -2 * light[1], -2 * light[2]);
+    this.lightCamera.lookAt(0, 0, 0);
 
     // Initialize environment mapping and environment material
     this.envMappingTarget = new THREE.WebGLRenderTarget(this.envMapSize, this.envMapSize, {type: THREE.FloatType});
@@ -249,6 +249,12 @@ class Water extends Effect {
     this.envMaterial = new THREE.ShaderMaterial({
       vertexShader: envVertex,
       fragmentShader: envFragment,
+      uniforms: {
+        light: { value: light },
+        caustics: { value: null },
+        lightProjectionMatrix: { value: this.lightCamera.projectionMatrix },
+        lightViewMatrix: { value: this.lightCamera.matrixWorldInverse  }
+      },
     });
 
     this.envMappingMeshes = [];
@@ -261,13 +267,13 @@ class Water extends Effect {
     // Initialize water caustics
     this.causticsTarget = new THREE.WebGLRenderTarget(this.causticsSize, this.causticsSize, {type: THREE.FloatType});
     this.causticsMaterial = new THREE.ShaderMaterial({
+      vertexShader: causticsVertex,
+      fragmentShader: causticsFragment,
       uniforms: {
         light: { value: light },
         envMap: { value: null },
         deltaEnvMapTexture: { value: 1. / this.envMapSize },
       },
-      vertexShader: causticsVertex,
-      fragmentShader: causticsFragment,
       side: THREE.DoubleSide,
       extensions: {
         derivatives: true
@@ -329,6 +335,8 @@ class Water extends Effect {
       renderer.clear();
 
       renderer.render(this.causticsMesh, this.lightCamera);
+
+      this.envMaterial.uniforms['caustics'].value = this.causticsTarget.texture;
 
       this.causticsNeedsUpdate = false;
     }
