@@ -129,14 +129,15 @@ class Renderer {
 
   set backgroundColor (color: string) {
     this.color = color;
+    this.clearColor = new THREE.Color(this.color);
 
-    this.renderer.setClearColor(new THREE.Color(this.color), this.opacity);
+    this.renderer.setClearColor(this.clearColor, this.opacity);
   }
 
   set backgroundOpacity (opacity: number) {
     this.opacity = opacity;
 
-    this.renderer.setClearColor(new THREE.Color(this.color), this.opacity);
+    this.renderer.setClearColor(this.clearColor, this.opacity);
   }
 
   set cameraPosition (position: THREE.Vector3) {
@@ -176,7 +177,7 @@ class Renderer {
     }
 
     this.renderer.setRenderTarget(null);
-    this.renderer.setClearColor(new THREE.Color(this.color), this.opacity);
+    this.renderer.setClearColor(this.clearColor, this.opacity);
 
     this.renderer.render(this.scene.scene, this.camera);
 
@@ -208,6 +209,7 @@ class Renderer {
   private animationID: number;
 
   private color: string;
+  private clearColor: THREE.Color;
   private opacity: number;
 
 }
