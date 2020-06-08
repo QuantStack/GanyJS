@@ -282,12 +282,7 @@ class Water extends Effect {
       }
     });
 
-    this.waterGeometry = new THREE.BufferGeometry();
-
-    const vertexBuffer = new THREE.BufferAttribute(parent.vertices, 3);
-    this.waterGeometry.setAttribute('position', vertexBuffer);
-
-    this.waterGeometry.computeVertexNormals();
+    this.updateWaterGeometry();
 
     this.causticsMesh = new THREE.Mesh(this.waterGeometry, this.causticsMaterial);
 
@@ -303,6 +298,9 @@ class Water extends Effect {
 
     this.waterMesh = new THREE.Mesh(this.waterGeometry, this.waterMaterial);
 
+    // Event listener for geometry change
+    this.parent.on('change:geometry', this.updateWater.bind(this));
+
     // Initialize renderer hook, this hook updates the caustics texture
     this.beforeRenderHook = this._beforeRenderHook;
   }
@@ -317,9 +315,33 @@ class Water extends Effect {
   }
 
   /**
+   * Update the water geometry and request caustics update.
+   */
+  updateWater (): void {
+    this.updateWaterGeometry();
+
+    this.causticsMesh.geometry = this.waterGeometry;
+    this.waterMesh.geometry = this.waterGeometry;
+
+    // Request caustics texture update on the next frame.
+    this.causticsNeedsUpdate = true;
+  }
+
+  private updateWaterGeometry (): void {
+    this.waterGeometry = new THREE.BufferGeometry();
+
+    const vertexBuffer = new THREE.BufferAttribute(this.parent.vertices, 3);
+    this.waterGeometry.setAttribute('position', vertexBuffer);
+
+    // TODO: Missing index buffer
+
+    this.waterGeometry.computeVertexNormals();
+  }
+
+  /**
    * Update the caustics texture if needed.
    */
-  _beforeRenderHook (renderer: THREE.WebGLRenderer): void {
+  private _beforeRenderHook (renderer: THREE.WebGLRenderer): void {
     if (this.causticsNeedsUpdate) {
       // Update environment map texture
       renderer.setRenderTarget(this.envMappingTarget);
