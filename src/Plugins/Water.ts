@@ -333,7 +333,12 @@ class Water extends Effect {
     const vertexBuffer = new THREE.BufferAttribute(this.parent.vertices, 3);
     this.waterGeometry.setAttribute('position', vertexBuffer);
 
-    // TODO: Missing index buffer
+    if (this.parent.triangleIndices !== null) {
+      const indexBuffer = new THREE.BufferAttribute(this.parent.triangleIndices, 1);
+      this.waterGeometry.setIndex(indexBuffer);
+    } else {
+      this.waterGeometry.setIndex(null);
+    }
 
     this.waterGeometry.computeVertexNormals();
   }
