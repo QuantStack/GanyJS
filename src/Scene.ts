@@ -85,6 +85,7 @@ class Renderer {
     // Renderer
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     this.renderer.setClearAlpha(0.);
+    this.renderer.autoClear = false;
 
     this.renderer.setSize(width, height);
     this.renderer.localClippingEnabled = true;
@@ -178,6 +179,7 @@ class Renderer {
 
     this.renderer.setRenderTarget(null);
     this.renderer.setClearColor(this.clearColor, this.opacity);
+    this.renderer.clear();
 
     this.renderer.render(this.scene.scene, this.camera);
 

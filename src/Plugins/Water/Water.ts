@@ -156,8 +156,8 @@ class Water extends Effect {
     // TODO Use the same directional light as the scene
     // TODO Compute clip planes values depending on the mesh + env bounding box
     const light = new THREE.Vector3(0., 0., -1.);
-    this.lightCamera = new THREE.OrthographicCamera(-1.2, 1.2, 1.2, -1.2, 0., 5.);
-    this.lightCamera.position.set(-2 * light.x, -2 * light.y, -2 * light.z);
+    this.lightCamera = new THREE.OrthographicCamera(-3.5, 3.5, 3.5, -3.5, 0., 10.);
+    this.lightCamera.position.set(-2. * light.x, -2. * light.y, -2. * light.z);
     this.lightCamera.lookAt(0, 0, 0);
 
     // Set the light to the underWaterBlocks
@@ -252,7 +252,9 @@ class Water extends Effect {
   private _beforeRenderHook (renderer: THREE.WebGLRenderer): void {
     if (this.causticsNeedsUpdate) {
       // Update environment map texture
+      renderer.setRenderTarget(UnderWater.envMappingTarget);
       renderer.setClearColor(black, 0);
+      renderer.clear();
 
       for (const underwater of this.underWaterBlocks) {
         underwater.renderEnvMap(renderer, this.lightCamera);
@@ -274,6 +276,10 @@ class Water extends Effect {
       this.causticsNeedsUpdate = false;
     }
   }
+
+  // TODO
+  // protected updateMatrix () {
+  // }
 
   private lightCamera: THREE.OrthographicCamera;
 

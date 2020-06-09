@@ -51,7 +51,6 @@ abstract class Block extends Events {
     }
 
     this.updateMatrix();
-
   }
 
   /**
@@ -62,6 +61,7 @@ abstract class Block extends Events {
 
     this.handleVerticesChange();
 
+    // TODO: Separate vertices change and triangles change event?
     this.trigger('change:geometry');
   }
 
@@ -79,6 +79,8 @@ abstract class Block extends Events {
     this._triangleIndices = triangleIndices;
 
     this.handleTriangleIndicesChange();
+
+    this.trigger('change:geometry');
   }
 
   /**
@@ -138,7 +140,7 @@ abstract class Block extends Events {
     this.updateMatrix();
   }
 
-  private updateMatrix () {
+  protected updateMatrix () {
     const scaleMatrix = new THREE.Matrix4().makeScale(this._scale.x, this._scale.y, this._scale.z);
     const positionMatrix = new THREE.Matrix4().makeTranslation(this._position.x, this._position.y, this._position.z);
 

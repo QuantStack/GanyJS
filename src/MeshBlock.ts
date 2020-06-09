@@ -59,7 +59,6 @@ class PolyMesh extends Block {
       const indexBuffer = new THREE.BufferAttribute(this.triangleIndices, 1);
       this.geometry.setIndex(indexBuffer);
     }
-
   }
 
   get boundingSphere () : THREE.Sphere {

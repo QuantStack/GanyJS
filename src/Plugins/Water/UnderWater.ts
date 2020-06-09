@@ -155,9 +155,12 @@ class UnderWater extends Effect {
     this.envMaterial.uniforms['caustics'].value = causticsTexture;
   }
 
-  renderEnvMap (renderer: THREE.WebGLRenderer, camera: THREE.Camera) {
-    renderer.setRenderTarget(UnderWater.envMappingTarget);
+  set side (side: number) {
+    this.envMappingMaterial.side = side;
+    this.envMaterial.side = side;
+  }
 
+  renderEnvMap (renderer: THREE.WebGLRenderer, camera: THREE.Camera) {
     for (const mesh of this.envMappingMeshes) {
       // @ts-ignore: Until https://github.com/mrdoob/three.js/pull/19564 is released
       renderer.render(mesh, camera);
