@@ -2,44 +2,17 @@ import * as THREE from 'three';
 
 import {
   Effect
-} from '../EffectBlock';
+} from '../../EffectBlock';
 
 import {
   Block
-} from '../Block';
+} from '../../Block';
+
+import {
+  UnderWater
+} from './UnderWater';
 
 const black = new THREE.Color('black');
-
-
-// Environment mapping shaders
-const envMappingVertex = `
-varying vec4 worldPosition;
-varying float depth;
-
-
-void main() {
-  // Compute world position
-  worldPosition = modelMatrix * vec4(position, 1.);
-
-  // Project vertex in the screen coordinates
-  vec4 projectedPosition = projectionMatrix * viewMatrix * worldPosition;
-
-  // Store vertex depth
-  depth = projectedPosition.z;
-
-  gl_Position = projectedPosition;
-}
-`;
-
-const envMappingFragment = `
-varying vec4 worldPosition;
-varying float depth;
-
-
-void main() {
-  gl_FragColor = vec4(worldPosition.xyz, depth);
-}
-`;
 
 
 // Caustics shaders
@@ -135,62 +108,6 @@ void main() {
 `;
 
 
-// Environment shaders
-const envVertex = `
-uniform vec3 light;
-
-// Light projection matrix
-uniform mat4 lightProjectionMatrix;
-uniform mat4 lightViewMatrix;
-
-varying float lightIntensity;
-varying vec3 lightPosition;
-
-
-void main(void){
-  lightIntensity = - dot(light, normalize(normal));
-
-  // Compute position in the light coordinates system, this will be used for
-  // comparing fragment depth with the caustics texture
-  vec4 lightRelativePosition = lightProjectionMatrix * lightViewMatrix * modelMatrix * vec4(position, 1.);
-  lightPosition = 0.5 + lightRelativePosition.xyz / lightRelativePosition.w * 0.5;
-
-  // The position of the vertex
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.);
-}
-`;
-
-const envFragment = `
-uniform sampler2D caustics;
-
-varying float lightIntensity;
-varying vec3 lightPosition;
-
-const float bias = 0.005;
-
-const vec3 underwaterColor = vec3(0.4, 0.9, 1.0);
-
-
-void main() {
-  // Set the frag color
-  float computedLightIntensity = 0.5;
-
-  computedLightIntensity += 0.2 * lightIntensity;
-
-  // Retrieve caustics information
-  vec2 causticsInfo = texture2D(caustics, lightPosition.xy).zw;
-  float causticsIntensity = causticsInfo.x;
-  float causticsDepth = causticsInfo.y;
-
-  if (causticsDepth > lightPosition.z - bias) {
-    computedLightIntensity += causticsIntensity;
-  }
-
-  gl_FragColor = vec4(underwaterColor * computedLightIntensity, 1.);
-}
-`;
-
-
 // Water shaders
 const waterVertex = `
 varying vec3 norm;
@@ -221,14 +138,16 @@ void main() {
 
 
 /**
- * Displays beautiful water with real-time caustics.
+ * Displays beautiful water and computes real-time caustics.
  **/
 // TODO Inherit from something else than Effect
 export
 class Water extends Effect {
 
-  constructor (parent: Block) {
+  constructor (parent: Block, underWaterBlocks: UnderWater[]) {
     super(parent);
+
+    this.underWaterBlocks = underWaterBlocks;
 
     // Remove meshes, only the water and the environment will stay
     this.meshes = [];
@@ -241,29 +160,9 @@ class Water extends Effect {
     this.lightCamera.position.set(-2 * light[0], -2 * light[1], -2 * light[2]);
     this.lightCamera.lookAt(0, 0, 0);
 
-    // Initialize environment mapping and environment material
-    this.envMappingTarget = new THREE.WebGLRenderTarget(this.envMapSize, this.envMapSize, {type: THREE.FloatType});
-    this.envMappingMaterial = new THREE.ShaderMaterial({
-      vertexShader: envMappingVertex,
-      fragmentShader: envMappingFragment,
-    });
-
-    this.envMaterial = new THREE.ShaderMaterial({
-      vertexShader: envVertex,
-      fragmentShader: envFragment,
-      uniforms: {
-        light: { value: light },
-        caustics: { value: null },
-        lightProjectionMatrix: { value: this.lightCamera.projectionMatrix },
-        lightViewMatrix: { value: this.lightCamera.matrixWorldInverse  }
-      },
-    });
-
-    this.envMappingMeshes = [];
-    this._environmentMeshes = [];
-    for (const envMesh of parent.options.environmentMeshes) {
-      this.envMappingMeshes.push(new THREE.Mesh(envMesh.geometry, this.envMappingMaterial));
-      this._environmentMeshes.push(new THREE.Mesh(envMesh.geometry, this.envMaterial));
+    // Set the light to the underWaterBlocks
+    for (const underwater of this.underWaterBlocks) {
+      underwater.setLight(light, this.lightCamera.projectionMatrix, this.lightCamera.matrixWorldInverse);
     }
 
     // Initialize water caustics
@@ -274,9 +173,9 @@ class Water extends Effect {
       uniforms: {
         light: { value: light },
         envMap: { value: null },
-        deltaEnvMapTexture: { value: 1. / this.envMapSize },
+        deltaEnvMapTexture: { value: 1. / UnderWater.envMapSize },
       },
-      side: THREE.DoubleSide,
+      side: THREE.DoubleSide, // TODO: Remove this?
       extensions: {
         derivatives: true
       }
@@ -312,6 +211,10 @@ class Water extends Effect {
     super.addToScene(scene);
 
     scene.add(this.waterMesh);
+
+    for (const underwater of this.underWaterBlocks) {
+      underwater.addToScene(scene);
+    }
   }
 
   /**
@@ -353,13 +256,12 @@ class Water extends Effect {
       renderer.setClearColor(black, 0);
       renderer.clear();
 
-      for (const mesh of this.envMappingMeshes) {
-        // @ts-ignore: Until https://github.com/mrdoob/three.js/pull/19564 is released
-        renderer.render(mesh, this.lightCamera);
+      for (const underwater of this.underWaterBlocks) {
+        underwater.renderEnvMap(renderer, this.lightCamera);
       }
 
       // Render caustics texture
-      this.causticsMaterial.uniforms['envMap'].value = this.envMappingTarget.texture;
+      this.causticsMaterial.uniforms['envMap'].value = UnderWater.envMappingTarget.texture;
 
       renderer.setRenderTarget(this.causticsTarget);
       renderer.clear();
@@ -377,13 +279,6 @@ class Water extends Effect {
 
   private causticsNeedsUpdate: boolean = true;
 
-  private envMapSize: number = 256;
-  private envMappingTarget: THREE.WebGLRenderTarget;
-  private envMappingMaterial: THREE.ShaderMaterial;
-  private envMappingMeshes: THREE.Mesh[];
-
-  private envMaterial: THREE.ShaderMaterial;
-
   private causticsSize: number = 512;
   private causticsTarget: THREE.WebGLRenderTarget;
   private causticsMaterial: THREE.ShaderMaterial;
@@ -393,5 +288,7 @@ class Water extends Effect {
   private waterMesh: THREE.Mesh;
 
   private waterGeometry: THREE.BufferGeometry;
+
+  private underWaterBlocks: UnderWater[];
 
 }
