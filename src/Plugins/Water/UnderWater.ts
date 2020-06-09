@@ -106,7 +106,7 @@ class UnderWater extends Effect {
   constructor (parent: Block) {
     super(parent);
 
-    // Remove meshes, only the environment will stay
+    // Remove meshes, we won't use NodeMeshes here
     this.meshes = [];
 
     // Initialize environment mapping and environment material
@@ -127,9 +127,21 @@ class UnderWater extends Effect {
     });
 
     this.envMappingMeshes = [];
+    this.envMeshes = [];
     for (const envMesh of parent.meshes) {
       this.envMappingMeshes.push(new THREE.Mesh(envMesh.geometry, this.envMappingMaterial));
-      this.meshes.push(new THREE.Mesh(envMesh.geometry, this.envMaterial));
+      this.envMeshes.push(new THREE.Mesh(envMesh.geometry, this.envMaterial));
+    }
+  }
+
+  /**
+   * Add the effect to a given scene
+   */
+  addToScene (scene: THREE.Scene) {
+    super.addToScene(scene);
+
+    for (const mesh of this.envMeshes) {
+      scene.add(mesh);
     }
   }
 
@@ -144,8 +156,10 @@ class UnderWater extends Effect {
   }
 
   renderEnvMap (renderer: THREE.WebGLRenderer, camera: THREE.Camera) {
-    // @ts-ignore: Until https://github.com/mrdoob/three.js/pull/19564 is released
+    renderer.setRenderTarget(UnderWater.envMappingTarget);
+
     for (const mesh of this.envMappingMeshes) {
+      // @ts-ignore: Until https://github.com/mrdoob/three.js/pull/19564 is released
       renderer.render(mesh, camera);
     }
   }
@@ -154,6 +168,7 @@ class UnderWater extends Effect {
   static envMappingTarget: THREE.WebGLRenderTarget = new THREE.WebGLRenderTarget(UnderWater.envMapSize, UnderWater.envMapSize, {type: THREE.FloatType});
   private envMappingMaterial: THREE.ShaderMaterial;
   private envMappingMeshes: THREE.Mesh[];
+  private envMeshes: THREE.Mesh[];
 
   private envMaterial: THREE.ShaderMaterial;
 
