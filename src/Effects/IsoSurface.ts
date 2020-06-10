@@ -68,6 +68,7 @@ class IsoSurface extends Effect {
     this.inputComponent.on('change:array', this.onInputArrayChange.bind(this));
 
     this.initialized = true;
+    this.updateMatrix();
   }
 
   updateGeometry () {

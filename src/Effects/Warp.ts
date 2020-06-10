@@ -38,6 +38,7 @@ class Warp extends Effect {
     this.buildMaterial();
 
     this.initialized = true;
+    this.updateMatrix();
   }
 
   setInput(input?: Input) : void {

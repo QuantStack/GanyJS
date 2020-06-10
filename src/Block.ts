@@ -49,8 +49,6 @@ abstract class Block extends Events {
     for (const mesh of this._environmentMeshes) {
       mesh.matrixAutoUpdate = false;
     }
-
-    this.updateMatrix();
   }
 
   /**
