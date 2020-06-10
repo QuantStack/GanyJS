@@ -128,9 +128,16 @@ class UnderWater extends Effect {
 
     this.envMappingMeshes = [];
     this.envMeshes = [];
-    for (const envMesh of parent.meshes) {
-      this.envMappingMeshes.push(new THREE.Mesh(envMesh.geometry, this.envMappingMaterial));
-      this.envMeshes.push(new THREE.Mesh(envMesh.geometry, this.envMaterial));
+    for (const mesh of parent.meshes) {
+      mesh.geometry.computeVertexNormals();
+
+      const envMappingMesh = new THREE.Mesh(mesh.geometry, this.envMappingMaterial)
+      envMappingMesh.matrixAutoUpdate = false;
+      this.envMappingMeshes.push(envMappingMesh);
+
+      const envMesh = new THREE.Mesh(mesh.geometry, this.envMaterial);
+      envMesh.matrixAutoUpdate = false;
+      this.envMeshes.push(envMesh);
     }
   }
 
@@ -164,6 +171,15 @@ class UnderWater extends Effect {
     for (const mesh of this.envMappingMeshes) {
       // @ts-ignore: Until https://github.com/mrdoob/three.js/pull/19564 is released
       renderer.render(mesh, camera);
+    }
+  }
+
+  setMatrix (matrix: THREE.Matrix4) {
+    for (const mesh of this.envMappingMeshes) {
+      mesh.matrix.copy(matrix);
+    }
+    for (const mesh of this.envMeshes) {
+      mesh.matrix.copy(matrix);
     }
   }
 

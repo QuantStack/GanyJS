@@ -204,12 +204,14 @@ class Water extends Effect {
     });
 
     this.waterMesh = new THREE.Mesh(this.waterGeometry, this.waterMaterial);
+    this.waterMesh.matrixAutoUpdate = false;
 
     // Event listener for geometry change
     this.parent.on('change:geometry', this.updateWater.bind(this));
 
     // Initialize renderer hook, this hook updates the caustics texture
     this.beforeRenderHook = this._beforeRenderHook;
+    this.updateMatrix();
   }
 
   /**
@@ -285,9 +287,33 @@ class Water extends Effect {
     }
   }
 
-  // TODO
-  // protected updateMatrix () {
-  // }
+  protected updateMatrix () {
+    const scaleMatrix = new THREE.Matrix4().makeScale(this._scale.x, this._scale.y, this._scale.z);
+    const positionMatrix = new THREE.Matrix4().makeTranslation(this._position.x, this._position.y, this._position.z);
+
+    const matrix = new THREE.Matrix4().multiplyMatrices(scaleMatrix, positionMatrix);
+
+    this.causticsMesh.matrix.copy(matrix);
+    this.waterMesh.matrix.copy(matrix);
+
+    for (const underwater of this.underWaterBlocks) {
+      underwater.setMatrix(matrix);
+    }
+  }
+
+  // Overwrite the base bounding sphere to take the env into account
+  get boundingSphere () : THREE.Sphere {
+    this.waterGeometry.computeBoundingSphere();
+
+    const boundingSpheres: THREE.Sphere[] = [this.waterGeometry.boundingSphere];
+    for (const underwater of this.underWaterBlocks) {
+      boundingSpheres.push(underwater.boundingSphere);
+    }
+
+    boundingSpheres.sort((a: THREE.Sphere, b: THREE.Sphere) => b.radius - a.radius);
+
+    return boundingSpheres[0];
+  }
 
   private lightCamera: THREE.OrthographicCamera;
 
