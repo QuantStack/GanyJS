@@ -35,6 +35,8 @@ const float eta = 0.7504;
 // if after this number of attempts we did not find the intersection, the result will be wrong.
 const int MAX_ITERATIONS = 50;
 
+const vec3 zero = vec3(0.);
+
 
 void main() {
   // This is the initial position: the ray starting point
@@ -75,6 +77,12 @@ void main() {
   }
 
   newPosition = environment.xyz;
+
+  // If we did not find a proper solution in the environment map
+  // we try not to set the newPosition to vec3(0.)
+  if (all(equal(newPosition, zero))) {
+    newPosition = vec3(oldPosition.xy, 1.);
+  }
 
   vec4 projectedEnvPosition = projectionMatrix * viewMatrix * vec4(newPosition, 1.0);
   depth = 0.5 + 0.5 * projectedEnvPosition.z / projectedEnvPosition.w;
