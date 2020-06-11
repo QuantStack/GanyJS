@@ -299,6 +299,10 @@ class Water extends Effect {
     for (const underwater of this.underWaterBlocks) {
       underwater.setMatrix(matrix);
     }
+
+    // Because the environment has moved we need to update the environment
+    // mapping and the caustics texture
+    this.causticsNeedsUpdate = true;
   }
 
   // Overwrite the base bounding sphere to take the env into account
