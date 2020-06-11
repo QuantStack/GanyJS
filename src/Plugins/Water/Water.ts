@@ -43,13 +43,13 @@ void main() {
   oldPosition = position;
 
   // Compute water coordinates in the screen space
-  vec4 projectedWaterPosition = projectionMatrix * viewMatrix * vec4(position, 1.);
+  vec4 projectedWaterPosition = projectionMatrix * modelViewMatrix * vec4(position, 1.);
 
   vec2 currentPosition = projectedWaterPosition.xy;
   vec2 coords = 0.5 + 0.5 * currentPosition;
 
   vec3 refracted = refract(light, normal, eta);
-  vec4 projectedRefractionVector = projectionMatrix * viewMatrix * vec4(refracted, 1.);
+  vec4 projectedRefractionVector = projectionMatrix * modelViewMatrix * vec4(refracted, 1.);
 
   vec3 refractedDirection = projectedRefractionVector.xyz;
 
@@ -81,7 +81,7 @@ void main() {
   // If we did not find a proper solution in the environment map
   // we try not to set the newPosition to vec3(0.)
   if (all(equal(newPosition, zero))) {
-    newPosition = vec3(oldPosition.xy, 1.);
+    newPosition = (modelMatrix * vec4(oldPosition.xyz, 1.)).xyz;
   }
 
   vec4 projectedEnvPosition = projectionMatrix * viewMatrix * vec4(newPosition, 1.0);
