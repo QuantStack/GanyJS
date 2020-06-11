@@ -43,6 +43,7 @@ void main() {
 // Environment shaders
 const envVertex = `
 uniform vec3 light;
+uniform bool revertNormal;
 
 // Light projection matrix
 uniform mat4 lightProjectionMatrix;
@@ -53,7 +54,12 @@ varying vec3 lightPosition;
 
 
 void main(void){
-  lightIntensity = - dot(light, normalize(normal));
+  vec3 norm = normal;
+  if (revertNormal) {
+    norm = - norm;
+  }
+
+  lightIntensity = - dot(light, normalize(norm));
 
   // Compute position in the light coordinates system, this will be used for
   // comparing fragment depth with the caustics texture
@@ -120,6 +126,7 @@ class UnderWater extends Effect {
       fragmentShader: envFragment,
       uniforms: {
         light: { value: null },
+        revertNormal: { value: false },
         caustics: { value: null },
         lightProjectionMatrix: { value: null },
         lightViewMatrix: { value: null }
@@ -163,14 +170,20 @@ class UnderWater extends Effect {
   }
 
   set side (side: number) {
+    if (side === THREE.BackSide) {
+      this.envMaterial.uniforms['revertNormal'].value = true;
+    } else {
+      this.envMaterial.uniforms['revertNormal'].value = false;
+    }
+
     this.envMappingMaterial.side = side;
     this.envMaterial.side = side;
   }
 
-  renderEnvMap (renderer: THREE.WebGLRenderer, camera: THREE.Camera) {
+  renderEnvMap (renderer: THREE.WebGLRenderer, lightCamera: THREE.Camera) {
     for (const mesh of this.envMappingMeshes) {
       // @ts-ignore: Until https://github.com/mrdoob/three.js/pull/19564 is released
-      renderer.render(mesh, camera);
+      renderer.render(mesh, lightCamera);
     }
   }
 
