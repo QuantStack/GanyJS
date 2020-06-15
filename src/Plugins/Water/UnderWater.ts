@@ -1,8 +1,12 @@
 import * as THREE from 'three';
 
 import {
-  Effect
+  Effect, Input, InputDimension
 } from '../../EffectBlock';
+
+import {
+  Component
+} from '../../Data';
 
 import {
   Block
@@ -56,7 +60,7 @@ void main(void){
 
   // Compute position in the light coordinates system, this will be used for
   // comparing fragment depth with the caustics texture
-  vec4 lightRelativePosition = lightProjectionMatrix * lightViewMatrix * modelMatrix * vec4(position, 1.);
+  vec4 lightRelativePosition = lightProjectionMatrix * lightViewMatrix * modelPosition;
   lightPosition = 0.5 + lightRelativePosition.xyz / lightRelativePosition.w * 0.5;
 
   // The position of the vertex
@@ -64,9 +68,11 @@ void main(void){
 }
 `;
 
-const envFragment = `
+const getEnvFragment = (underwater: String) => `
 uniform vec3 light;
 uniform sampler2D caustics;
+
+attribute float ${underwater};
 
 varying vec3 lightPosition;
 varying vec3 worldPosition;
@@ -74,6 +80,7 @@ varying vec3 worldPosition;
 const float bias = 0.005;
 
 const vec3 underwaterColor = vec3(0.4, 0.9, 1.0);
+const vec3 overwaterColor = vec3(0.9, 0.9, 0.9);
 
 
 void main() {
@@ -98,7 +105,11 @@ void main() {
     computedLightIntensity += causticsIntensity;
   }
 
-  gl_FragColor = vec4(underwaterColor * computedLightIntensity, 1.);
+  if (${underwater} > 0.) {
+    gl_FragColor = vec4(underwaterColor * computedLightIntensity, 1.);
+  } else {
+    gl_FragColor = vec4(overwaterColor * computedLightIntensity, 1.);
+  }
 }
 `;
 
@@ -110,21 +121,24 @@ void main() {
 export
 class UnderWater extends Effect {
 
-  constructor (parent: Block) {
-    super(parent);
+  constructor (parent: Block, input: Input) {
+    super(parent, input);
 
     // Remove meshes, we won't use NodeMeshes here
     this.meshes = [];
+
+    this.inputComponent = this.inputs[0];
 
     // Initialize environment mapping and environment material
     this.envMappingMaterial = new THREE.ShaderMaterial({
       vertexShader: envMappingVertex,
       fragmentShader: envMappingFragment,
+      side: THREE.BackSide // WHY IS THIS NEEDED???????
     });
 
     this.envMaterial = new THREE.ShaderMaterial({
       vertexShader: envVertex,
-      fragmentShader: envFragment,
+      fragmentShader: getEnvFragment(this.inputComponent.shaderName),
       uniforms: {
         light: { value: null },
         caustics: { value: null },
@@ -147,6 +161,8 @@ class UnderWater extends Effect {
       envMesh.matrixAutoUpdate = false;
       this.envMeshes.push(envMesh);
     }
+
+    this.initialized = true;
   }
 
   /**
@@ -188,6 +204,19 @@ class UnderWater extends Effect {
     }
   }
 
+  setInput(input?: Input) : void {
+    super.setInput(input);
+
+    if (this.initialized) {
+      this.envMaterial.fragmentShader = getEnvFragment(this.inputComponent.shaderName);
+      this.envMaterial.needsUpdate = true;
+    }
+  }
+
+  get inputDimension () : InputDimension {
+    return 1;
+  }
+
   static readonly envMapSize: number = 256;
   static envMappingTarget: THREE.WebGLRenderTarget = new THREE.WebGLRenderTarget(UnderWater.envMapSize, UnderWater.envMapSize, {type: THREE.FloatType});
   private envMappingMaterial: THREE.ShaderMaterial;
@@ -195,5 +224,10 @@ class UnderWater extends Effect {
   private envMeshes: THREE.Mesh[];
 
   private envMaterial: THREE.ShaderMaterial;
+
+  private initialized: boolean = false;
+  private inputComponent: Component;
+
+  protected inputs: Component[] = [];
 
 }
