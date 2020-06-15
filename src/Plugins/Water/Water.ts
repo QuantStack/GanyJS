@@ -312,7 +312,7 @@ class Water extends Effect {
   get boundingSphere () : THREE.Sphere {
     this.waterGeometry.computeBoundingSphere();
 
-    const boundingSpheres: THREE.Sphere[] = [this.waterGeometry.boundingSphere];
+    const boundingSpheres: THREE.Sphere[] = [this.waterGeometry.boundingSphere as THREE.Sphere];
     for (const underwater of this.underWaterBlocks) {
       boundingSpheres.push(underwater.boundingSphere);
     }
