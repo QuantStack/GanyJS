@@ -294,7 +294,10 @@ class Water extends Effect {
     const matrix = new THREE.Matrix4().multiplyMatrices(scaleMatrix, positionMatrix);
 
     this.causticsMesh.matrix.copy(matrix);
+    this.causticsMesh.updateMatrixWorld(true);
+
     this.waterMesh.matrix.copy(matrix);
+    this.waterMesh.updateMatrixWorld(true);
 
     for (const underwater of this.underWaterBlocks) {
       underwater.setMatrix(matrix);

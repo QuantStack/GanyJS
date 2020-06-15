@@ -180,9 +180,11 @@ class UnderWater extends Effect {
   setMatrix (matrix: THREE.Matrix4) {
     for (const mesh of this.envMappingMeshes) {
       mesh.matrix.copy(matrix);
+      mesh.updateMatrixWorld(true);
     }
     for (const mesh of this.envMeshes) {
       mesh.matrix.copy(matrix);
+      mesh.updateMatrixWorld(true);
     }
   }
 
