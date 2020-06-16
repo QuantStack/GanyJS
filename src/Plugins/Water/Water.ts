@@ -39,11 +39,13 @@ const vec3 zero = vec3(0.);
 
 
 void main() {
+  vec4 modelPosition = modelMatrix * vec4(position, 1.);
+
   // This is the initial position: the ray starting point
-  oldPosition = position;
+  oldPosition = modelPosition.xyz;
 
   // Compute water coordinates in the screen space
-  vec4 projectedWaterPosition = projectionMatrix * modelViewMatrix * vec4(position, 1.);
+  vec4 projectedWaterPosition = projectionMatrix * viewMatrix * modelPosition;
 
   vec2 currentPosition = projectedWaterPosition.xy;
   vec2 coords = 0.5 + 0.5 * currentPosition;
@@ -81,7 +83,7 @@ void main() {
   // If we did not find a proper solution in the environment map
   // we try not to set the newPosition to vec3(0.)
   if (all(equal(newPosition, zero))) {
-    newPosition = (modelMatrix * vec4(oldPosition.xyz, 1.)).xyz;
+    newPosition = oldPosition;
   }
 
   vec4 projectedEnvPosition = projectionMatrix * viewMatrix * vec4(newPosition, 1.0);
@@ -93,7 +95,7 @@ void main() {
 
 const causticsFragment = `
 // TODO Make it a uniform
-const float causticsFactor = 0.2;
+const float causticsFactor = 0.5;
 
 varying vec3 oldPosition;
 varying vec3 newPosition;
@@ -136,7 +138,7 @@ varying vec3 norm;
 
 
 void main() {
-  float light_intensity = - dot(light, norm);
+  float light_intensity = dot(light, norm);
 
   vec3 color = vec3(0.45, 0.64, 0.74);
 
@@ -164,8 +166,9 @@ class Water extends Effect {
     // TODO Use the same directional light as the scene
     // TODO Compute clip planes values depending on the mesh + env bounding box
     const light = new THREE.Vector3(0., 0., -1.);
-    this.lightCamera = new THREE.OrthographicCamera(-3.5, 3.5, 3.5, -3.5, 0., 10.);
-    this.lightCamera.position.set(-2. * light.x, -2. * light.y, -2. * light.z);
+    const factor = 0.5925048158409217;
+    this.lightCamera = new THREE.OrthographicCamera(-1.61 * factor, 1.61 * factor, 0.5 * factor, -0.5 * factor, 0., 2.);
+    this.lightCamera.position.set(0., 0., 1.2);
     this.lightCamera.lookAt(0, 0, 0);
 
     // Set the light to the underWaterBlocks
@@ -183,7 +186,6 @@ class Water extends Effect {
         envMap: { value: null },
         deltaEnvMapTexture: { value: 1. / UnderWater.envMapSize },
       },
-      side: THREE.DoubleSide, // TODO: Remove this?
       extensions: {
         derivatives: true
       }
@@ -192,6 +194,7 @@ class Water extends Effect {
     this.updateWaterGeometry();
 
     this.causticsMesh = new THREE.Mesh(this.waterGeometry, this.causticsMaterial);
+    this.causticsMesh.matrixAutoUpdate = false;
 
     // Initialize water mesh
     this.waterMaterial = new THREE.ShaderMaterial({
@@ -200,6 +203,7 @@ class Water extends Effect {
       },
       vertexShader: waterVertex,
       fragmentShader: waterFragment,
+      transparent: true,
       side: THREE.DoubleSide
     });
 
