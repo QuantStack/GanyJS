@@ -45,16 +45,22 @@ void main() {
 
 
 // Environment shaders
-const envVertex = `
+const getEnvVertex = (underwater: String) => `
+attribute float ${underwater};
+
 // Light projection matrix
 uniform mat4 lightProjectionMatrix;
 uniform mat4 lightViewMatrix;
 
 varying vec3 lightPosition;
 varying vec3 worldPosition;
+varying float v${underwater};
 
 
 void main(void){
+  // Interpolate the underwater value
+  v${underwater} = ${underwater};
+
   vec4 modelPosition = modelMatrix * vec4(position, 1.);
   worldPosition = modelPosition.xyz;
 
@@ -72,15 +78,14 @@ const getEnvFragment = (underwater: String) => `
 uniform vec3 light;
 uniform sampler2D caustics;
 
-attribute float ${underwater};
-
 varying vec3 lightPosition;
 varying vec3 worldPosition;
+varying float v${underwater};
 
 const float bias = 0.005;
 
 const vec3 underwaterColor = vec3(0.4, 0.9, 1.0);
-const vec3 overwaterColor = vec3(0.9, 0.9, 0.9);
+const vec3 overwaterColor = vec3(1.);
 
 
 void main() {
@@ -105,7 +110,7 @@ void main() {
     computedLightIntensity += causticsIntensity;
   }
 
-  if (${underwater} > 0.) {
+  if (v${underwater} < 0.) {
     gl_FragColor = vec4(underwaterColor * computedLightIntensity, 1.);
   } else {
     gl_FragColor = vec4(overwaterColor * computedLightIntensity, 1.);
@@ -133,11 +138,10 @@ class UnderWater extends Effect {
     this.envMappingMaterial = new THREE.ShaderMaterial({
       vertexShader: envMappingVertex,
       fragmentShader: envMappingFragment,
-      side: THREE.BackSide // WHY IS THIS NEEDED???????
     });
 
     this.envMaterial = new THREE.ShaderMaterial({
-      vertexShader: envVertex,
+      vertexShader: getEnvVertex(this.inputComponent.shaderName),
       fragmentShader: getEnvFragment(this.inputComponent.shaderName),
       uniforms: {
         light: { value: null },
@@ -156,6 +160,8 @@ class UnderWater extends Effect {
       const envMappingMesh = new THREE.Mesh(mesh.geometry, this.envMappingMaterial)
       envMappingMesh.matrixAutoUpdate = false;
       this.envMappingMeshes.push(envMappingMesh);
+
+      (mesh.geometry as THREE.BufferGeometry).setAttribute(this.inputComponent.shaderName, this.inputComponent.bufferAttribute);
 
       const envMesh = new THREE.Mesh(mesh.geometry, this.envMaterial);
       envMesh.matrixAutoUpdate = false;
@@ -208,6 +214,13 @@ class UnderWater extends Effect {
     super.setInput(input);
 
     if (this.initialized) {
+      this.inputComponent = this.inputs[0];
+
+      for (const mesh of this.envMeshes) {
+        (mesh.geometry as THREE.BufferGeometry).setAttribute(this.inputComponent.shaderName, this.inputComponent.bufferAttribute);
+      }
+
+      this.envMaterial.vertexShader = getEnvVertex(this.inputComponent.shaderName);
       this.envMaterial.fragmentShader = getEnvFragment(this.inputComponent.shaderName);
       this.envMaterial.needsUpdate = true;
     }
@@ -228,6 +241,6 @@ class UnderWater extends Effect {
   private initialized: boolean = false;
   private inputComponent: Component;
 
-  protected inputs: Component[] = [];
+  protected inputs: Component[];
 
 }
