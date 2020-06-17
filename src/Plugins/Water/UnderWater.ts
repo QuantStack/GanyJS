@@ -101,16 +101,16 @@ void main() {
 
   computedLightIntensity += 0.2 * lightIntensity;
 
-  // Retrieve caustics information
-  vec2 causticsInfo = texture2D(caustics, lightPosition.xy).zw;
-  float causticsIntensity = causticsInfo.x;
-  float causticsDepth = causticsInfo.y;
-
-  if (causticsDepth > lightPosition.z - bias) {
-    computedLightIntensity += causticsIntensity;
-  }
-
   if (v${underwater} < 0.) {
+    // Retrieve caustics information
+    vec2 causticsInfo = texture2D(caustics, lightPosition.xy).zw;
+    float causticsIntensity = causticsInfo.x;
+    float causticsDepth = causticsInfo.y;
+
+    if (causticsDepth > lightPosition.z - bias) {
+      computedLightIntensity += causticsIntensity;
+    }
+
     gl_FragColor = vec4(underwaterColor * computedLightIntensity, 1.);
   } else {
     gl_FragColor = vec4(overwaterColor * computedLightIntensity, 1.);

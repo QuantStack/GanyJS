@@ -35,8 +35,6 @@ const float eta = 0.7504;
 // if after this number of attempts we did not find the intersection, the result will be wrong.
 const int MAX_ITERATIONS = 50;
 
-const vec3 zero = vec3(0.);
-
 
 void main() {
   vec4 modelPosition = modelMatrix * vec4(position, 1.);
@@ -80,12 +78,6 @@ void main() {
 
   newPosition = environment.xyz;
 
-  // If we did not find a proper solution in the environment map
-  // we try not to set the newPosition to vec3(0.)
-  if (all(equal(newPosition, zero))) {
-    newPosition = oldPosition;
-  }
-
   vec4 projectedEnvPosition = projectionMatrix * viewMatrix * vec4(newPosition, 1.0);
   depth = 0.5 + 0.5 * projectedEnvPosition.z / projectedEnvPosition.w;
 
@@ -95,7 +87,7 @@ void main() {
 
 const causticsFragment = `
 // TODO Make it a uniform
-const float causticsFactor = 0.5;
+const float causticsFactor = 0.2;
 
 varying vec3 oldPosition;
 varying vec3 newPosition;
@@ -147,6 +139,16 @@ void main() {
 `;
 
 
+export
+interface WaterOptions {
+
+  causticsEnabled?: boolean;
+
+  underWaterBlocks?: UnderWater[];
+
+}
+
+
 /**
  * Displays beautiful water and computes real-time caustics.
  **/
@@ -154,10 +156,13 @@ void main() {
 export
 class Water extends Effect {
 
-  constructor (parent: Block, underWaterBlocks: UnderWater[]) {
+  constructor (parent: Block, options?: WaterOptions) {
     super(parent);
 
-    this.underWaterBlocks = underWaterBlocks;
+    if (options) {
+      this.causticsEnabled = options.causticsEnabled !== undefined ? options.causticsEnabled : this.causticsEnabled;
+      this.underWaterBlocks = options.underWaterBlocks !== undefined ? options.underWaterBlocks : this.underWaterBlocks;
+    }
 
     // Remove meshes, only the water and the environment will stay
     this.meshes = [];
@@ -165,10 +170,10 @@ class Water extends Effect {
     // Initialize the light camera
     // TODO Use the same directional light as the scene
     // TODO Compute clip planes values depending on the mesh + env bounding box
-    const light = new THREE.Vector3(0., 0., -1.);
+    const light = new THREE.Vector3(-0.2, -0.2, -1.);
     const factor = 0.5925048158409217;
     this.lightCamera = new THREE.OrthographicCamera(-1.61 * factor, 1.61 * factor, 0.5 * factor, -0.5 * factor, 0., 2.);
-    this.lightCamera.position.set(0., 0., 1.2);
+    this.lightCamera.position.set(1.2 * 0.2, 1.2 * 0.2, 1.2);
     this.lightCamera.lookAt(0, 0, 0);
 
     // Set the light to the underWaterBlocks
@@ -264,7 +269,7 @@ class Water extends Effect {
    * Update the caustics texture if needed.
    */
   private _beforeRenderHook (renderer: THREE.WebGLRenderer): void {
-    if (this.causticsNeedsUpdate) {
+    if (this.causticsNeedsUpdate && this.causticsEnabled) {
       // Update environment map texture
       renderer.setRenderTarget(UnderWater.envMappingTarget);
       renderer.setClearColor(black, 0);
@@ -329,6 +334,7 @@ class Water extends Effect {
   private lightCamera: THREE.OrthographicCamera;
 
   private causticsNeedsUpdate: boolean = true;
+  causticsEnabled: boolean = false;
 
   private causticsSize: number = 512;
   private causticsTarget: THREE.WebGLRenderTarget;
@@ -340,6 +346,6 @@ class Water extends Effect {
 
   private waterGeometry: THREE.BufferGeometry;
 
-  private underWaterBlocks: UnderWater[];
+  private underWaterBlocks: UnderWater[] = [];
 
 }
