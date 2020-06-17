@@ -180,7 +180,7 @@ class NodeMesh {
 
   get boundingSphere () : THREE.Sphere {
     this.geometry.computeBoundingSphere();
-    return this.geometry.boundingSphere;
+    return this.geometry.boundingSphere as THREE.Sphere;
   }
 
   set defaultColor (defaultColor: string) {

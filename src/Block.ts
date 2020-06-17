@@ -49,9 +49,6 @@ abstract class Block extends Events {
     for (const mesh of this._environmentMeshes) {
       mesh.matrixAutoUpdate = false;
     }
-
-    this.updateMatrix();
-
   }
 
   /**
@@ -62,6 +59,7 @@ abstract class Block extends Events {
 
     this.handleVerticesChange();
 
+    // TODO: Separate vertices change and triangles change event?
     this.trigger('change:geometry');
   }
 
@@ -79,6 +77,8 @@ abstract class Block extends Events {
     this._triangleIndices = triangleIndices;
 
     this.handleTriangleIndicesChange();
+
+    this.trigger('change:geometry');
   }
 
   /**
@@ -138,7 +138,7 @@ abstract class Block extends Events {
     this.updateMatrix();
   }
 
-  private updateMatrix () {
+  protected updateMatrix () {
     const scaleMatrix = new THREE.Matrix4().makeScale(this._scale.x, this._scale.y, this._scale.z);
     const positionMatrix = new THREE.Matrix4().makeTranslation(this._position.x, this._position.y, this._position.z);
 
@@ -213,5 +213,7 @@ abstract class Block extends Events {
   protected lastCameraPosition: THREE.Vector3 = new THREE.Vector3(0., 0., 2.);
 
   parent: Block | null = null;
+
+  beforeRenderHook: ((renderer: THREE.WebGLRenderer) => void) | null = null;
 
 }

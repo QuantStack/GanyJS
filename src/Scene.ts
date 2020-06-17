@@ -34,7 +34,7 @@ class Scene {
   /**
    * Add an GanyJS block to the scene
    */
-  addChild (block: Block) {
+  addBlock (block: Block) {
     this.blocks.push(block);
     block.addToScene(this.scene);
   }
@@ -85,6 +85,7 @@ class Renderer {
     // Renderer
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     this.renderer.setClearAlpha(0.);
+    this.renderer.autoClear = false;
 
     this.renderer.setSize(width, height);
     this.renderer.localClippingEnabled = true;
@@ -129,14 +130,15 @@ class Renderer {
 
   set backgroundColor (color: string) {
     this.color = color;
+    this.clearColor = new THREE.Color(this.color);
 
-    this.renderer.setClearColor(new THREE.Color(this.color), this.opacity);
+    this.renderer.setClearColor(this.clearColor, this.opacity);
   }
 
   set backgroundOpacity (opacity: number) {
     this.opacity = opacity;
 
-    this.renderer.setClearColor(new THREE.Color(this.color), this.opacity);
+    this.renderer.setClearColor(this.clearColor, this.opacity);
   }
 
   set cameraPosition (position: THREE.Vector3) {
@@ -169,6 +171,16 @@ class Renderer {
   private animate () {
     this.animationID = window.requestAnimationFrame(this.animate.bind(this));
 
+    for (const block of this.scene.blocks) {
+      if (block.beforeRenderHook !== null) {
+        block.beforeRenderHook(this.renderer);
+      }
+    }
+
+    this.renderer.setRenderTarget(null);
+    this.renderer.setClearColor(this.clearColor, this.opacity);
+    this.renderer.clear();
+
     this.renderer.render(this.scene.scene, this.camera);
 
     this.controls.update();
@@ -199,6 +211,7 @@ class Renderer {
   private animationID: number;
 
   private color: string;
+  private clearColor: THREE.Color;
   private opacity: number;
 
 }

@@ -38,6 +38,7 @@ class Alpha extends Effect {
     this.parent.on('change:geometry', this.sortTriangleIndices.bind(this));
 
     this.initialized = true;
+    this.updateMatrix();
   }
 
   setInput(input?: Input) : void {

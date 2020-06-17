@@ -59,12 +59,11 @@ class PolyMesh extends Block {
       const indexBuffer = new THREE.BufferAttribute(this.triangleIndices, 1);
       this.geometry.setIndex(indexBuffer);
     }
-
   }
 
   get boundingSphere () : THREE.Sphere {
     this.geometry.computeBoundingSphere();
-    return this.geometry.boundingSphere;
+    return this.geometry.boundingSphere as THREE.Sphere;
   }
 
   _triangleIndices: Uint32Array;
@@ -125,7 +124,7 @@ class PointCloud extends Block {
 
   get boundingSphere () : THREE.Sphere {
     this.geometry.computeBoundingSphere();
-    return this.geometry.boundingSphere;
+    return this.geometry.boundingSphere as THREE.Sphere;
   }
 
   geometry: THREE.BufferGeometry;
