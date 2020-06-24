@@ -86,8 +86,7 @@ void main() {
 `;
 
 const causticsFragment = `
-// TODO Make it a uniform
-const float causticsFactor = 0.2;
+uniform float causticsFactor;
 
 varying vec3 oldPosition;
 varying vec3 newPosition;
@@ -146,6 +145,8 @@ interface WaterOptions {
 
   underWaterBlocks?: UnderWater[];
 
+  causticsFactor?: number;
+
 }
 
 
@@ -162,6 +163,7 @@ class Water extends Effect {
     if (options) {
       this.causticsEnabled = options.causticsEnabled !== undefined ? options.causticsEnabled : this.causticsEnabled;
       this.underWaterBlocks = options.underWaterBlocks !== undefined ? options.underWaterBlocks : this.underWaterBlocks;
+      this._causticsFactor = options.causticsFactor !== undefined ? options.causticsFactor : this._causticsFactor;
     }
 
     // Remove meshes, only the water and the environment will stay
@@ -190,6 +192,7 @@ class Water extends Effect {
         light: { value: light },
         envMap: { value: null },
         deltaEnvMapTexture: { value: 1. / UnderWater.envMapSize },
+        causticsFactor: { value: this._causticsFactor },
       },
       extensions: {
         derivatives: true
@@ -247,6 +250,11 @@ class Water extends Effect {
 
     // Request caustics texture update on the next frame.
     this.causticsNeedsUpdate = true;
+  }
+
+  set causticsFactor(value: number) {
+    this._causticsFactor = value;
+    this.causticsMaterial.uniforms['causticsFactor'].value = value;
   }
 
   private updateWaterGeometry (): void {
@@ -340,6 +348,7 @@ class Water extends Effect {
   private causticsTarget: THREE.WebGLRenderTarget;
   private causticsMaterial: THREE.ShaderMaterial;
   private causticsMesh: THREE.Mesh;
+  private _causticsFactor: number = 0.2;
 
   private waterMaterial: THREE.ShaderMaterial;
   private waterMesh: THREE.Mesh;
