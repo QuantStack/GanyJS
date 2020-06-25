@@ -101,7 +101,7 @@ void main() {
 
   computedLightIntensity += 0.2 * lightIntensity;
 
-  if (v${underwater} < 0.) {
+  if (v${underwater} > 0.) {
     // Retrieve caustics information
     vec2 causticsInfo = texture2D(caustics, lightPosition.xy).zw;
     float causticsIntensity = causticsInfo.x;
