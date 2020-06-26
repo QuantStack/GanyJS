@@ -15,6 +15,29 @@ import {
 const black = new THREE.Color('black');
 
 
+// Init environment mapping shaders
+const initEnvMappingVertex = `
+varying vec4 worldPosition;
+
+
+void main() {
+  // Compute world position
+  worldPosition = modelMatrix * vec4(position, 1.);
+
+  gl_Position = projectionMatrix * viewMatrix * worldPosition;
+}
+`;
+
+const initEnvMappingFragment = `
+varying vec4 worldPosition;
+
+
+void main() {
+  gl_FragColor = vec4(worldPosition.xyz, 1.);
+}
+`;
+
+
 // Caustics shaders
 const causticsVertex = `
 uniform vec3 light;
@@ -208,6 +231,14 @@ class Water extends Effect {
     this.light = new THREE.Vector3(0., 0., -1.);
     this.lightCamera = new THREE.OrthographicCamera(-1, 1, 1, -1);
 
+    // Create mesh that serves as an initializer for the environment mapping
+    // So that we get meaningful values in the environment map by default
+    this.initEnvMapMaterial = new THREE.ShaderMaterial({
+      vertexShader: initEnvMappingVertex,
+      fragmentShader: initEnvMappingFragment
+    });
+    this.initEnvMapMesh = new THREE.Mesh(new THREE.PlaneBufferGeometry(2, 2), this.initEnvMapMaterial);
+
     this.updateLightCamera();
 
     this.waterMaterial.uniforms['light'].value = this.light;
@@ -226,9 +257,6 @@ class Water extends Effect {
    */
   addToScene (scene: THREE.Scene) {
     super.addToScene(scene);
-
-    // const helper = new THREE.CameraHelper(this.lightCamera);
-    // scene.add(helper);
 
     scene.add(this.waterMesh);
 
@@ -283,6 +311,11 @@ class Water extends Effect {
 
     boundSphere.applyMatrix4(matrix);
 
+    // Move the mesh that serves at initializing the env map
+    this.initEnvMapMesh.scale.set(boundSphere.radius, boundSphere.radius, boundSphere.radius);
+    this.initEnvMapMesh.position.set(boundSphere.center.x, boundSphere.center.y, -boundSphere.radius);
+    this.initEnvMapMesh.updateMatrixWorld(true);
+
     // Change frustum
     this.lightCamera.left = -boundSphere.radius;
     this.lightCamera.right = boundSphere.radius;
@@ -312,6 +345,8 @@ class Water extends Effect {
       renderer.setRenderTarget(UnderWater.envMappingTarget);
       renderer.setClearColor(black, 0);
       renderer.clear();
+
+      renderer.render(this.initEnvMapMesh, this.lightCamera);
 
       for (const underwater of this.underWaterBlocks) {
         underwater.renderEnvMap(renderer, this.lightCamera);
@@ -387,6 +422,9 @@ class Water extends Effect {
   private waterMesh: THREE.Mesh;
 
   private waterGeometry: THREE.BufferGeometry;
+
+  private initEnvMapMaterial: THREE.ShaderMaterial;
+  private initEnvMapMesh: THREE.Mesh;
 
   private underWaterBlocks: UnderWater[] = [];
 
