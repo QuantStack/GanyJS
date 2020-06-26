@@ -323,7 +323,6 @@ class Water extends Effect {
       renderer.setRenderTarget(this.causticsTarget);
       renderer.clear();
 
-      // @ts-ignore: Until https://github.com/mrdoob/three.js/pull/19564 is released
       renderer.render(this.causticsMesh, this.lightCamera);
 
       for (const underwater of this.underWaterBlocks) {

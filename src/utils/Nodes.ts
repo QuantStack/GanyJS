@@ -14,7 +14,6 @@ class IdentityNode extends Nodes.Node {
   }
 
   generate (builder: Nodes.NodeBuilder, output: string) {
-    // @ts-ignore: See https://github.com/mrdoob/three.js/pull/18008
     return this.value.generate(builder, output);
   }
 

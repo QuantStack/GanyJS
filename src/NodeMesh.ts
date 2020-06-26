@@ -143,7 +143,6 @@ class NodeMesh {
 
     // Workaround for https://github.com/mrdoob/three.js/issues/18152
     if (this.mesh.type == 'Points') {
-      // @ts-ignore
       this.material.normal = new Nodes.Vector3Node(1, 1, 1);
     }
 
