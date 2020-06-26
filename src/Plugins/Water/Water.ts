@@ -205,8 +205,22 @@ class Water extends Effect {
       },
       extensions: {
         derivatives: true
-      }
+      },
+      transparent: true,
     });
+
+    this.causticsMaterial.blending = THREE.CustomBlending;
+
+    // Set the blending so that:
+    // Caustics intensity uses an additive function
+    this.causticsMaterial.blendEquation = THREE.AddEquation;
+    this.causticsMaterial.blendSrc = THREE.OneFactor;
+    this.causticsMaterial.blendDst = THREE.OneFactor;
+
+    // Caustics depth does not use blending, we just set the value
+    this.causticsMaterial.blendEquationAlpha = THREE.AddEquation;
+    this.causticsMaterial.blendSrcAlpha = THREE.OneFactor;
+    this.causticsMaterial.blendDstAlpha = THREE.ZeroFactor;
 
     this.updateWaterGeometry();
 
