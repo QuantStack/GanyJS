@@ -169,27 +169,13 @@ class Water extends Effect {
     // Remove meshes, only the water and the environment will stay
     this.meshes = [];
 
-    // Initialize the light camera
-    // TODO Use the same directional light as the scene
-    // TODO Compute clip planes values depending on the mesh + env bounding box
-    const light = new THREE.Vector3(-0.2, -0.2, -1.);
-    const factor = 0.5925048158409217;
-    this.lightCamera = new THREE.OrthographicCamera(-1.61 * factor, 1.61 * factor, 0.5 * factor, -0.5 * factor, 0., 2.);
-    this.lightCamera.position.set(1.2 * 0.2, 1.2 * 0.2, 1.2);
-    this.lightCamera.lookAt(0, 0, 0);
-
-    // Set the light to the underWaterBlocks
-    for (const underwater of this.underWaterBlocks) {
-      underwater.setLight(light, this.lightCamera.projectionMatrix, this.lightCamera.matrixWorldInverse);
-    }
-
     // Initialize water caustics
     this.causticsTarget = new THREE.WebGLRenderTarget(this.causticsSize, this.causticsSize, {type: THREE.FloatType});
     this.causticsMaterial = new THREE.ShaderMaterial({
       vertexShader: causticsVertex,
       fragmentShader: causticsFragment,
       uniforms: {
-        light: { value: light },
+        light: { value: null },
         envMap: { value: null },
         deltaEnvMapTexture: { value: 1. / UnderWater.envMapSize },
         causticsFactor: { value: this._causticsFactor },
@@ -207,7 +193,7 @@ class Water extends Effect {
     // Initialize water mesh
     this.waterMaterial = new THREE.ShaderMaterial({
       uniforms: {
-        light: { value: light },
+        light: { value: null },
       },
       vertexShader: waterVertex,
       fragmentShader: waterFragment,
@@ -217,6 +203,15 @@ class Water extends Effect {
 
     this.waterMesh = new THREE.Mesh(this.waterGeometry, this.waterMaterial);
     this.waterMesh.matrixAutoUpdate = false;
+
+    // Initialize the light camera
+    this.light = new THREE.Vector3(0., 0., -1.);
+    this.lightCamera = new THREE.OrthographicCamera(-1, 1, 1, -1);
+
+    this.updateLightCamera();
+
+    this.waterMaterial.uniforms['light'].value = this.light;
+    this.causticsMaterial.uniforms['light'].value = this.light;
 
     // Event listener for geometry change
     this.parent.on('change:geometry', this.updateWater.bind(this));
@@ -231,6 +226,9 @@ class Water extends Effect {
    */
   addToScene (scene: THREE.Scene) {
     super.addToScene(scene);
+
+    // const helper = new THREE.CameraHelper(this.lightCamera);
+    // scene.add(helper);
 
     scene.add(this.waterMesh);
 
@@ -271,6 +269,38 @@ class Water extends Effect {
     }
 
     this.waterGeometry.computeVertexNormals();
+  }
+
+  private updateLightCamera (): void {
+    // TODO Use bounding box instead?
+    const boundSphere = new THREE.Sphere().copy(this.boundingSphere);
+
+    // Apply transformations to the boundingSphere
+    const scaleMatrix = new THREE.Matrix4().makeScale(this._scale.x, this._scale.y, this._scale.z);
+    const positionMatrix = new THREE.Matrix4().makeTranslation(this._position.x, this._position.y, this._position.z);
+
+    const matrix = new THREE.Matrix4().multiplyMatrices(scaleMatrix, positionMatrix);
+
+    boundSphere.applyMatrix4(matrix);
+
+    // Change frustum
+    this.lightCamera.left = -boundSphere.radius;
+    this.lightCamera.right = boundSphere.radius;
+    this.lightCamera.top = boundSphere.radius;
+    this.lightCamera.bottom = -boundSphere.radius;
+    this.lightCamera.near = 0.;
+    this.lightCamera.far = 2 * boundSphere.radius;
+
+    this.lightCamera.position.set(0., 0., boundSphere.radius);
+    this.lightCamera.lookAt(boundSphere.center);
+
+    // Recompute camera projection matrices
+    this.lightCamera.updateProjectionMatrix();
+
+    // Set the light to the underWaterBlocks
+    for (const underwater of this.underWaterBlocks) {
+      underwater.setLight(this.light, this.lightCamera.projectionMatrix, this.lightCamera.matrixWorldInverse);
+    }
   }
 
   /**
@@ -320,6 +350,8 @@ class Water extends Effect {
       underwater.setMatrix(matrix);
     }
 
+    this.updateLightCamera();
+
     // Because the environment has moved we need to update the environment
     // mapping and the caustics texture
     this.causticsNeedsUpdate = true;
@@ -339,6 +371,8 @@ class Water extends Effect {
     return boundingSpheres[0];
   }
 
+  // TODO Use the same directional light as the scene
+  private light: THREE.Vector3;
   private lightCamera: THREE.OrthographicCamera;
 
   private causticsNeedsUpdate: boolean = true;
