@@ -329,6 +329,7 @@ class Water extends Effect {
 
     // Recompute camera projection matrices
     this.lightCamera.updateProjectionMatrix();
+    this.lightCamera.updateMatrixWorld(true);
 
     // Set the light to the underWaterBlocks
     for (const underwater of this.underWaterBlocks) {
