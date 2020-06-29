@@ -124,7 +124,7 @@ void main() {
     float oldArea = length(dFdx(oldPosition)) * length(dFdy(oldPosition));
     float newArea = length(dFdx(newPosition)) * length(dFdy(newPosition));
 
-    causticsIntensity = causticsFactor * oldArea / newArea;
+    causticsIntensity = causticsFactor * ((oldArea / newArea) - 1.);
   }
 
   gl_FragColor = vec4(causticsIntensity, causticsIntensity, causticsIntensity, depth);
