@@ -77,15 +77,29 @@ void main(void){
 const getEnvFragment = (underwater: String) => `
 uniform vec3 light;
 uniform sampler2D caustics;
+// TODO Make this a uniform
+const vec2 resolution = vec2(1024.);
 
 varying vec3 lightPosition;
 varying vec3 worldPosition;
 varying float v${underwater};
 
-const float bias = 0.005;
+const float bias = 0.001;
 
 const vec3 underwaterColor = vec3(0.4, 0.9, 1.0);
 const vec3 overwaterColor = vec3(1.);
+
+float blur(sampler2D image, vec2 uv, vec2 resolution, vec2 direction) {
+  float intensity = 0.;
+  vec2 off1 = vec2(1.3846153846) * direction;
+  vec2 off2 = vec2(3.2307692308) * direction;
+  intensity += texture2D(image, uv).x * 0.2270270270;
+  intensity += texture2D(image, uv + (off1 / resolution)).x * 0.3162162162;
+  intensity += texture2D(image, uv - (off1 / resolution)).x * 0.3162162162;
+  intensity += texture2D(image, uv + (off2 / resolution)).x * 0.0702702703;
+  intensity += texture2D(image, uv - (off2 / resolution)).x * 0.0702702703;
+  return intensity;
+}
 
 
 void main() {
@@ -104,8 +118,12 @@ void main() {
   if (v${underwater} > 0.) {
     // Retrieve caustics information
     vec2 causticsInfo = texture2D(caustics, lightPosition.xy).zw;
-    float causticsIntensity = causticsInfo.x;
     float causticsDepth = causticsInfo.y;
+
+    float causticsIntensity = 0.5 * (
+      blur(caustics, lightPosition.xy, resolution, vec2(0., 0.5)) +
+      blur(caustics, lightPosition.xy, resolution, vec2(0.5, 0.))
+    );
 
     if (causticsDepth > lightPosition.z - bias) {
       computedLightIntensity += causticsIntensity;
@@ -229,7 +247,7 @@ class UnderWater extends Effect {
     return 1;
   }
 
-  static readonly envMapSize: number = 256;
+  static readonly envMapSize: number = 1024;
   static envMappingTarget: THREE.WebGLRenderTarget = new THREE.WebGLRenderTarget(UnderWater.envMapSize, UnderWater.envMapSize, {type: THREE.FloatType});
   private envMappingMaterial: THREE.ShaderMaterial;
   private envMappingMeshes: THREE.Mesh[];

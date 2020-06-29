@@ -371,6 +371,7 @@ class Water extends Effect {
       this.causticsMaterial.uniforms['envMap'].value = UnderWater.envMappingTarget.texture;
 
       renderer.setRenderTarget(this.causticsTarget);
+      renderer.setClearColor(black, 0);
       renderer.clear();
 
       renderer.render(this.causticsMesh, this.lightCamera);
@@ -427,7 +428,7 @@ class Water extends Effect {
   private causticsNeedsUpdate: boolean = true;
   causticsEnabled: boolean = false;
 
-  private causticsSize: number = 512;
+  private causticsSize: number = 1024;
   private causticsTarget: THREE.WebGLRenderTarget;
   private causticsMaterial: THREE.ShaderMaterial;
   private causticsMesh: THREE.Mesh;
