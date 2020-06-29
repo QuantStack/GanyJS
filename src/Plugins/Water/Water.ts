@@ -72,7 +72,7 @@ void main() {
   vec2 coords = 0.5 + 0.5 * currentPosition;
 
   vec3 refracted = refract(light, normal, eta);
-  vec4 projectedRefractionVector = projectionMatrix * modelViewMatrix * vec4(refracted, 1.);
+  vec4 projectedRefractionVector = projectionMatrix * viewMatrix * vec4(refracted, 1.);
 
   vec3 refractedDirection = projectedRefractionVector.xyz;
 
