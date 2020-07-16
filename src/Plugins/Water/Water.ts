@@ -42,30 +42,6 @@ void main() {
 }
 `;
 
-const causticsFragment = `
-uniform float causticsFactor;
-
-varying vec3 oldPosition;
-varying vec3 newPosition;
-varying float waterDepth;
-varying float depth;
-
-
-void main() {
-  float causticsIntensity = 0.;
-
-  if (depth >= waterDepth) {
-    float oldArea = length(dFdx(oldPosition)) * length(dFdy(oldPosition));
-    float newArea = length(dFdx(newPosition)) * length(dFdy(newPosition));
-
-    causticsIntensity = causticsFactor * ((oldArea / newArea) - 1.);
-  }
-
-  gl_FragColor = vec4(causticsIntensity, causticsIntensity, causticsIntensity, depth);
-}
-`;
-
-
 // Water shaders
 const waterVertex = `
 varying vec3 norm;
@@ -120,7 +96,7 @@ class Water extends Effect {
     if (options) {
       this.causticsEnabled = options.causticsEnabled !== undefined ? options.causticsEnabled : this.causticsEnabled;
       this.underWaterBlocks = options.underWaterBlocks !== undefined ? options.underWaterBlocks : this.underWaterBlocks;
-      this._causticsFactor = options.causticsFactor !== undefined ? options.causticsFactor : this._causticsFactor;
+      this._causticsFactor = options.causticsFactor !== undefined ? new Nodes.FloatNode(options.causticsFactor) : this._causticsFactor;
     }
 
     // Remove meshes, only the water and the environment will stay
@@ -137,7 +113,7 @@ class Water extends Effect {
     const waterDepthVarying = new Nodes.VarNode('float');
     const depthVarying = new Nodes.VarNode('float');
 
-    const causticsNode = new Nodes.FunctionNode(
+    const causticsComputationNode = new Nodes.FunctionNode(
       `vec3 causticsFunc${this.id}(sampler2D envMap, float deltaEnvMapTexture, vec3 position){
         // Air refractive index / Water refractive index
         const float eta = 0.7504;
@@ -195,19 +171,49 @@ class Water extends Effect {
       }`
     );
 
-    causticsNode.keywords['oldPosition'] = oldPositionVarying;
-    causticsNode.keywords['newPosition'] = newPositionVarying;
-    causticsNode.keywords['waterDepth'] = waterDepthVarying;
-    causticsNode.keywords['depth'] = depthVarying;
+    causticsComputationNode.keywords['oldPosition'] = oldPositionVarying;
+    causticsComputationNode.keywords['newPosition'] = newPositionVarying;
+    causticsComputationNode.keywords['waterDepth'] = waterDepthVarying;
+    causticsComputationNode.keywords['depth'] = depthVarying;
 
-    const causticsNodeCall = new Nodes.FunctionCallNode(causticsNode);
+    const causticsComputationNodeCall = new Nodes.FunctionCallNode(
+      causticsComputationNode,
+      {
+        envMap: null,
+        deltaEnvMapTexture: new Nodes.FloatNode(1. / UnderWater.envMapSize),
+        position: new Nodes.PositionNode(),
+      }
+    );
 
-    causticsNodeCall.inputs.envMap = null;
-    causticsNodeCall.inputs.deltaEnvMapTexture = new Nodes.FloatNode(1. / UnderWater.envMapSize);
-    causticsNodeCall.inputs.position = new Nodes.PositionNode();
+    const causticsIntensityNode = new Nodes.FunctionNode(
+      `vec4 causticsIntensityFunc${this.id}(vec3 oldPosition, vec3 newPosition, float waterDepth, float depth, float causticsFactor){
+        float causticsIntensity = 0.;
+
+        if (depth >= waterDepth) {
+          float oldArea = length(dFdx(oldPosition)) * length(dFdy(oldPosition));
+          float newArea = length(dFdx(newPosition)) * length(dFdy(newPosition));
+
+          causticsIntensity = causticsFactor * ((oldArea / newArea) - 1.);
+        }
+
+        return vec4(causticsIntensity, causticsIntensity, causticsIntensity, depth);
+      }`
+    );
+
+    const causticsIntensityNodeCall = new Nodes.FunctionCallNode(
+      causticsIntensityNode,
+      {
+        oldPosition: oldPositionVarying,
+        newPosition: newPositionVarying,
+        waterDepth: waterDepthVarying,
+        depth: depthVarying,
+        causticsFactor: this._causticsFactor,
+      }
+    );
 
     for (const nodeMesh of waterMeshes) {
-      nodeMesh.addTransformNode(NodeOperation.ASSIGN, causticsNodeCall);
+      nodeMesh.addTransformNode(NodeOperation.ASSIGN, causticsComputationNodeCall);
+      nodeMesh.addColorNode(NodeOperation.ASSIGN, causticsIntensityNodeCall);
 
       nodeMesh.material.blending = THREE.CustomBlending;
 
@@ -289,8 +295,7 @@ class Water extends Effect {
   }
 
   set causticsFactor(value: number) {
-    this._causticsFactor = value;
-    this.causticsMaterial.uniforms['causticsFactor'].value = value;
+    this._causticsFactor.value = value;
   }
 
   private updateWaterGeometry (): void {
@@ -428,7 +433,7 @@ class Water extends Effect {
   private causticsTarget: THREE.WebGLRenderTarget;
   private causticsMaterial: THREE.ShaderMaterial;
   private causticsMesh: THREE.Mesh;
-  private _causticsFactor: number = 0.2;
+  private _causticsFactor: Nodes.FloatNode = new Nodes.FloatNode(0.2);
 
   private waterMaterial: THREE.ShaderMaterial;
   private waterMesh: THREE.Mesh;
