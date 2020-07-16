@@ -54,12 +54,16 @@ uniform mat4 lightViewMatrix;
 
 varying vec3 lightPosition;
 varying vec3 worldPosition;
+varying vec3 textureBlending;
 varying float v${underwater};
+varying vec3 vNormal;
 
 
 void main(void){
   // Interpolate the underwater value
   v${underwater} = ${underwater};
+
+  vNormal = normal.xyz;
 
   vec4 modelPosition = modelMatrix * vec4(position, 1.);
   worldPosition = modelPosition.xyz;
@@ -69,6 +73,12 @@ void main(void){
   vec4 lightRelativePosition = lightProjectionMatrix * lightViewMatrix * modelPosition;
   lightPosition = 0.5 + lightRelativePosition.xyz / lightRelativePosition.w * 0.5;
 
+  // Texture blending
+  textureBlending = abs(normal);
+  textureBlending = normalize(max(textureBlending, 0.00001)); // Force weights to sum to 1.0
+  float b = textureBlending.x + textureBlending.y + textureBlending.z;
+  textureBlending /= vec3(b, b, b);
+
   // The position of the vertex
   gl_Position = projectionMatrix * viewMatrix * modelPosition;
 }
@@ -77,12 +87,24 @@ void main(void){
 const getEnvFragment = (underwater: String) => `
 uniform vec3 light;
 uniform sampler2D caustics;
-// TODO Make this a uniform
+
+#ifdef USE_TEXTURING
+uniform sampler2D envTexture;
+#endif
+
+// TODO Make those uniforms
 const vec2 resolution = vec2(1024.);
+const float scale = 1. / 0.5;
+const vec2 sandTextureResolution = vec2(512, 512);
+const vec3 sandColor = vec3(0.951, 1., 0.825);
+
+vec3 texColor;
 
 varying vec3 lightPosition;
 varying vec3 worldPosition;
+varying vec3 textureBlending;
 varying float v${underwater};
+varying vec3 vNormal;
 
 const float bias = 0.001;
 
@@ -101,19 +123,55 @@ float blur(sampler2D image, vec2 uv, vec2 resolution, vec2 direction) {
   return intensity;
 }
 
+vec2 random2(vec2 st){
+    st = vec2(
+        dot(st, vec2(127.1, 311.7)),
+        dot(st, vec2(269.5, 183.3))
+    );
+
+    return -1.0 + 2.0 * fract(sin(st) * 43758.5453123);
+}
+
+// Gradient Noise
+float noise(vec2 st) {
+    vec2 i = floor(st);
+    vec2 f = fract(st);
+
+    vec2 u = f * f * (3.0 - 2.0 * f);
+
+    return mix(
+        mix(
+            dot(random2(i + vec2(0.0, 0.0)), f - vec2(0.0, 0.0)),
+            dot(random2(i + vec2(1.0, 0.0)), f - vec2(1.0, 0.0)),
+            u.x
+        ),
+    mix(
+            dot(random2(i + vec2(0.0, 1.0)), f - vec2(0.0, 1.0)),
+      dot(random2(i + vec2(1.0, 1.0) ), f - vec2(1.0, 1.0)),
+            u.x
+        ),
+        u.y
+    );
+}
 
 void main() {
-  // Compute flat shading normal (inefficient, should be computed on CPU once)
-  vec3 X = dFdx(worldPosition);
-  vec3 Y = dFdy(worldPosition);
-  vec3 normal = normalize(cross(X, Y));
+  float lightIntensity = - dot(light, normalize(vNormal));
 
-  float lightIntensity = - dot(light, normalize(normal));
-
-  // Set the frag color
   float computedLightIntensity = 0.5;
-
   computedLightIntensity += 0.2 * lightIntensity;
+
+#ifdef USE_TEXTURING
+  // Texture tri-planar mapping
+  vec3 xaxis = texture2D(envTexture, worldPosition.yz * scale).xyz;
+  vec3 yaxis = texture2D(envTexture, worldPosition.xz * scale).xyz;
+  vec3 zaxis = texture2D(envTexture, worldPosition.xy * scale).xyz;
+#else
+  // Tri-planar mapping on the generated sand texture
+  vec3 xaxis = vec3(noise(worldPosition.yz * 100. * scale) * 0.2 + 0.9) * sandColor;
+  vec3 yaxis = vec3(noise(worldPosition.xz * 100. * scale) * 0.2 + 0.9) * sandColor;
+  vec3 zaxis = vec3(noise(worldPosition.xy * 100. * scale) * 0.2 + 0.9) * sandColor;
+#endif
+  texColor = xaxis * textureBlending.x + yaxis * textureBlending.y + zaxis * textureBlending.z;
 
   if (v${underwater} > 0.) {
     // Retrieve caustics information
@@ -129,9 +187,9 @@ void main() {
       computedLightIntensity += causticsIntensity;
     }
 
-    gl_FragColor = vec4(underwaterColor * computedLightIntensity, 1.);
+    gl_FragColor = vec4(texColor * underwaterColor * computedLightIntensity, 1.);
   } else {
-    gl_FragColor = vec4(overwaterColor * computedLightIntensity, 1.);
+    gl_FragColor = vec4(texColor * overwaterColor * computedLightIntensity, 1.);
   }
 }
 `;
@@ -140,7 +198,6 @@ void main() {
 /**
  * Block that receives the caustics.
  **/
-// TODO: Take a 1D input, the underwater component that specifies if the vertex is underwater or not
 export
 class UnderWater extends Effect {
 
@@ -164,8 +221,12 @@ class UnderWater extends Effect {
       uniforms: {
         light: { value: null },
         caustics: { value: null },
+        envTexture: { value: null },
         lightProjectionMatrix: { value: null },
         lightViewMatrix: { value: null }
+      },
+      defines: {
+        USE_TEXTURING: false
       },
       extensions: {
         derivatives: true
@@ -180,6 +241,9 @@ class UnderWater extends Effect {
       this.envMappingMeshes.push(envMappingMesh);
 
       (mesh.geometry as THREE.BufferGeometry).setAttribute(this.inputComponent.shaderName, this.inputComponent.bufferAttribute);
+
+      // We need the normals in shaders
+      mesh.geometry.computeVertexNormals();
 
       const envMesh = new THREE.Mesh(mesh.geometry, this.envMaterial);
       envMesh.matrixAutoUpdate = false;
@@ -208,6 +272,21 @@ class UnderWater extends Effect {
 
   setCausticsTexture (causticsTexture: THREE.Texture) {
     this.envMaterial.uniforms['caustics'].value = causticsTexture;
+  }
+
+  setTexture (texture: THREE.Texture | null) {
+    if (texture === null) {
+      this.envMaterial.uniforms['envTexture'].value = null;
+      this.envMaterial.defines['USE_TEXTURING'] = false;
+
+      return;
+    }
+
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+
+    this.envMaterial.uniforms['envTexture'].value = texture;
+    this.envMaterial.defines['USE_TEXTURING'] = true;
   }
 
   renderEnvMap (renderer: THREE.WebGLRenderer, lightCamera: THREE.Camera) {
