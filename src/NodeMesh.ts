@@ -67,7 +67,11 @@ class NodeMesh {
     this.meshCtor = T;
 
     this.geometry = geometry;
-    this.material = new Nodes.StandardNodeMaterial();
+    this.material = new Nodes.StandardNodeMaterial(
+      extensions: {
+        derivatives: true
+      },
+    );
 
     this.data = data;
 

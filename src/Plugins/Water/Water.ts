@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import * as Nodes from 'three/examples/jsm/nodes/Nodes';
 
 import {
   Effect
@@ -7,6 +8,10 @@ import {
 import {
   Block
 } from '../../Block';
+
+import {
+  NodeMesh
+} from '../../NodeMesh';
 
 import {
   UnderWater
@@ -34,77 +39,6 @@ varying vec4 worldPosition;
 
 void main() {
   gl_FragColor = vec4(worldPosition.xyz, 1.);
-}
-`;
-
-
-// Caustics shaders
-const causticsVertex = `
-uniform vec3 light;
-
-uniform sampler2D envMap;
-uniform float deltaEnvMapTexture;
-
-varying vec3 oldPosition;
-varying vec3 newPosition;
-varying float waterDepth;
-varying float depth;
-
-// Air refractive index / Water refractive index
-const float eta = 0.7504;
-
-// TODO Make this a uniform
-// This is the maximum iterations when looking for the ray intersection with the environment,
-// if after this number of attempts we did not find the intersection, the result will be wrong.
-const int MAX_ITERATIONS = 50;
-
-
-void main() {
-  vec4 modelPosition = modelMatrix * vec4(position, 1.);
-
-  // This is the initial position: the ray starting point
-  oldPosition = modelPosition.xyz;
-
-  // Compute water coordinates in the screen space
-  vec4 projectedWaterPosition = projectionMatrix * viewMatrix * modelPosition;
-
-  vec2 currentPosition = projectedWaterPosition.xy;
-  vec2 coords = 0.5 + 0.5 * currentPosition;
-
-  vec3 refracted = refract(light, normal, eta);
-  vec4 projectedRefractionVector = projectionMatrix * viewMatrix * vec4(refracted, 1.);
-
-  vec3 refractedDirection = projectedRefractionVector.xyz;
-
-  waterDepth = 0.5 + 0.5 * projectedWaterPosition.z / projectedWaterPosition.w;
-  float currentDepth = projectedWaterPosition.z;
-  vec4 environment = texture2D(envMap, coords);
-
-  // This factor will scale the delta parameters so that we move from one pixel to the other in the env map
-  float factor = deltaEnvMapTexture / length(refractedDirection.xy);
-
-  vec2 deltaDirection = refractedDirection.xy * factor;
-  float deltaDepth = refractedDirection.z * factor;
-
-  for (int i = 0; i < MAX_ITERATIONS; i++) {
-    // Move the coords in the direction of the refraction
-    currentPosition += deltaDirection;
-    currentDepth += deltaDepth;
-
-    // End of loop condition: The ray has hit the environment
-    if (environment.w <= currentDepth) {
-      break;
-    }
-
-    environment = texture2D(envMap, 0.5 + 0.5 * currentPosition);
-  }
-
-  newPosition = environment.xyz;
-
-  vec4 projectedEnvPosition = projectionMatrix * viewMatrix * vec4(newPosition, 1.0);
-  depth = 0.5 + 0.5 * projectedEnvPosition.z / projectedEnvPosition.w;
-
-  gl_Position = projectedEnvPosition;
 }
 `;
 
@@ -190,42 +124,104 @@ class Water extends Effect {
     }
 
     // Remove meshes, only the water and the environment will stay
+    const waterMeshes = this.meshes;
     this.meshes = [];
-
-    // Initialize water caustics
-    this.causticsTarget = new THREE.WebGLRenderTarget(this.causticsSize, this.causticsSize, {type: THREE.FloatType});
-    this.causticsMaterial = new THREE.ShaderMaterial({
-      vertexShader: causticsVertex,
-      fragmentShader: causticsFragment,
-      uniforms: {
-        light: { value: null },
-        envMap: { value: null },
-        deltaEnvMapTexture: { value: 1. / UnderWater.envMapSize },
-        causticsFactor: { value: this._causticsFactor },
-      },
-      extensions: {
-        derivatives: true
-      },
-      transparent: true,
-    });
-
-    this.causticsMaterial.blending = THREE.CustomBlending;
-
-    // Set the blending so that:
-    // Caustics intensity uses an additive function
-    this.causticsMaterial.blendEquation = THREE.AddEquation;
-    this.causticsMaterial.blendSrc = THREE.OneFactor;
-    this.causticsMaterial.blendDst = THREE.OneFactor;
-
-    // Caustics depth does not use blending, we just set the value
-    this.causticsMaterial.blendEquationAlpha = THREE.AddEquation;
-    this.causticsMaterial.blendSrcAlpha = THREE.OneFactor;
-    this.causticsMaterial.blendDstAlpha = THREE.ZeroFactor;
 
     this.updateWaterGeometry();
 
-    this.causticsMesh = new THREE.Mesh(this.waterGeometry, this.causticsMaterial);
-    this.causticsMesh.matrixAutoUpdate = false;
+    // Initialize water caustics Mesh
+    this.causticsTarget = new THREE.WebGLRenderTarget(this.causticsSize, this.causticsSize, {type: THREE.FloatType});
+
+    const oldPositionVarying = new Nodes.VarNode('vec3');
+    const newPositionVarying = new Nodes.VarNode('vec3')
+    const waterDepthVarying = new Nodes.VarNode('float');
+    const depthVarying = new Nodes.VarNode('float');
+
+    const causticsNode = new Nodes.FunctionNode(
+      `vec3 causticsFunc${this.id}(sampler2D envMap, float deltaEnvMapTexture, vec3 position){
+        // Air refractive index / Water refractive index
+        const float eta = 0.7504;
+
+        // TODO Make this a uniform
+        // This is the maximum iterations when looking for the ray intersection with the environment,
+        // if after this number of attempts we did not find the intersection, the result will be wrong.
+        const int MAX_ITERATIONS = 50;
+
+        vec4 modelPosition = modelMatrix * vec4(position, 1.);
+
+        // This is the initial position: the ray starting point
+        oldPosition = modelPosition.xyz;
+
+        // Compute water coordinates in the screen space
+        vec4 projectedWaterPosition = projectionMatrix * viewMatrix * modelPosition;
+
+        vec2 currentPosition = projectedWaterPosition.xy;
+        vec2 coords = 0.5 + 0.5 * currentPosition;
+
+        vec3 refracted = refract(light, normal, eta);
+        vec4 projectedRefractionVector = projectionMatrix * viewMatrix * vec4(refracted, 1.);
+
+        vec3 refractedDirection = projectedRefractionVector.xyz;
+
+        waterDepth = 0.5 + 0.5 * projectedWaterPosition.z / projectedWaterPosition.w;
+        float currentDepth = projectedWaterPosition.z;
+        vec4 environment = texture2D(envMap, coords);
+
+        // This factor will scale the delta parameters so that we move from one pixel to the other in the env map
+        float factor = deltaEnvMapTexture / length(refractedDirection.xy);
+
+        vec2 deltaDirection = refractedDirection.xy * factor;
+        float deltaDepth = refractedDirection.z * factor;
+
+        for (int i = 0; i < MAX_ITERATIONS; i++) {
+          // Move the coords in the direction of the refraction
+          currentPosition += deltaDirection;
+          currentDepth += deltaDepth;
+
+          // End of loop condition: The ray has hit the environment
+          if (environment.w <= currentDepth) {
+            break;
+          }
+
+          environment = texture2D(envMap, 0.5 + 0.5 * currentPosition);
+        }
+
+        newPosition = environment.xyz;
+
+        vec4 projectedEnvPosition = projectionMatrix * viewMatrix * vec4(newPosition, 1.0);
+        depth = 0.5 + 0.5 * projectedEnvPosition.z / projectedEnvPosition.w;
+
+        return newPosition;
+      }`
+    );
+
+    causticsNode.keywords['oldPosition'] = oldPositionVarying;
+    causticsNode.keywords['newPosition'] = newPositionVarying;
+    causticsNode.keywords['waterDepth'] = waterDepthVarying;
+    causticsNode.keywords['depth'] = depthVarying;
+
+    const causticsNodeCall = new Nodes.FunctionCallNode(causticsNode);
+
+    causticsNodeCall.inputs.envMap = null;
+    causticsNodeCall.inputs.deltaEnvMapTexture = new Nodes.FloatNode(1. / UnderWater.envMapSize);
+    causticsNodeCall.inputs.position = new Nodes.PositionNode();
+
+    for (const nodeMesh of waterMeshes) {
+      nodeMesh.addTransformNode(NodeOperation.ASSIGN, causticsNodeCall);
+
+      nodeMesh.material.blending = THREE.CustomBlending;
+
+      // Set the blending so that:
+      // Caustics intensity uses an additive function
+      nodeMesh.material.blendEquation = THREE.AddEquation;
+      nodeMesh.material.blendSrc = THREE.OneFactor;
+      nodeMesh.material.blendDst = THREE.OneFactor;
+
+      // Caustics depth does not use blending, we just set the value
+      nodeMesh.material.blendEquationAlpha = THREE.AddEquation;
+      nodeMesh.material.blendSrcAlpha = THREE.OneFactor;
+      nodeMesh.material.blendDstAlpha = THREE.ZeroFactor;
+    }
 
     // Initialize water mesh
     this.waterMaterial = new THREE.ShaderMaterial({
