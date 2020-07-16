@@ -96,7 +96,7 @@ uniform sampler2D envTexture;
 const vec2 resolution = vec2(1024.);
 const float scale = 1. / 0.5;
 const vec2 sandTextureResolution = vec2(512, 512);
-const vec3 sandColor = vec3(0.992,0.902,0.683);
+const vec3 sandColor = vec3(0.951, 1., 0.825);
 
 vec3 texColor;
 
