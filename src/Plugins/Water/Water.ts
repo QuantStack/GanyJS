@@ -171,10 +171,12 @@ class Water extends Effect {
       }`
     );
 
-    causticsComputationNode.keywords['oldPosition'] = oldPositionVarying;
-    causticsComputationNode.keywords['newPosition'] = newPositionVarying;
-    causticsComputationNode.keywords['waterDepth'] = waterDepthVarying;
-    causticsComputationNode.keywords['depth'] = depthVarying;
+    causticsComputationNode.keywords = {
+      oldPosition: oldPositionVarying,
+      newPosition: newPositionVarying,
+      waterDepth: waterDepthVarying,
+      depth: depthVarying,
+    };
 
     const causticsComputationNodeCall = new Nodes.FunctionCallNode(
       causticsComputationNode,
