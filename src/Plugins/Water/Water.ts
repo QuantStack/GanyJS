@@ -188,7 +188,7 @@ class Water extends Effect {
     );
 
     const causticsIntensityNode = new Nodes.FunctionNode(
-      `vec4 causticsIntensityFunc${this.id}(vec3 oldPosition, vec3 newPosition, float waterDepth, float depth, float causticsFactor){
+      `vec3 causticsIntensityFunc${this.id}(vec3 oldPosition, vec3 newPosition, float waterDepth, float depth, float causticsFactor){
         float causticsIntensity = 0.;
 
         if (depth >= waterDepth) {
@@ -198,7 +198,7 @@ class Water extends Effect {
           causticsIntensity = causticsFactor * ((oldArea / newArea) - 1.);
         }
 
-        return vec4(causticsIntensity, causticsIntensity, causticsIntensity, depth);
+        return vec3(causticsIntensity);
       }`
     );
 
@@ -214,8 +214,12 @@ class Water extends Effect {
     );
 
     for (const nodeMesh of waterMeshes) {
+      // Vertex shader
       nodeMesh.addTransformNode(NodeOperation.ASSIGN, causticsComputationNodeCall);
       nodeMesh.addColorNode(NodeOperation.ASSIGN, causticsIntensityNodeCall);
+
+      // Fragment shader
+      nodeMesh.addAlphaNode(NodeOperation.ASSIGN, depthVarying);
 
       nodeMesh.material.blending = THREE.CustomBlending;
 
