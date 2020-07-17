@@ -100,8 +100,12 @@ class Water extends Effect {
     }
 
     // Remove meshes, only the water and the environment will stay
-    const waterMeshes = this.meshes;
+    this.causticsMeshes = this.meshes;
     this.meshes = [];
+
+    // Initialize the light camera
+    this.light = new THREE.Vector3(0., 0., -1.);
+    this.lightCamera = new THREE.OrthographicCamera(-1, 1, 1, -1);
 
     this.updateWaterGeometry();
 
@@ -114,7 +118,7 @@ class Water extends Effect {
     const depthVarying = new Nodes.VarNode('float');
 
     const causticsComputationNode = new Nodes.FunctionNode(
-      `vec3 causticsFunc${this.id}(sampler2D envMap, float deltaEnvMapTexture, vec3 position){
+      `vec3 causticsFunc${this.id}(sampler2D envMap, float deltaEnvMapTexture, vec3 position, vec3 light){
         // Air refractive index / Water refractive index
         const float eta = 0.7504;
 
@@ -180,11 +184,7 @@ class Water extends Effect {
 
     const causticsComputationNodeCall = new Nodes.FunctionCallNode(
       causticsComputationNode,
-      {
-        envMap: null,
-        deltaEnvMapTexture: new Nodes.FloatNode(1. / UnderWater.envMapSize),
-        position: new Nodes.PositionNode(),
-      }
+      [this.envMap, new Nodes.FloatNode(1. / UnderWater.envMapSize), new Nodes.PositionNode(), this.light]
     );
 
     const causticsIntensityNode = new Nodes.FunctionNode(
@@ -204,16 +204,10 @@ class Water extends Effect {
 
     const causticsIntensityNodeCall = new Nodes.FunctionCallNode(
       causticsIntensityNode,
-      {
-        oldPosition: oldPositionVarying,
-        newPosition: newPositionVarying,
-        waterDepth: waterDepthVarying,
-        depth: depthVarying,
-        causticsFactor: this._causticsFactor,
-      }
+      [oldPositionVarying, newPositionVarying, waterDepthVarying, depthVarying, this._causticsFactor]
     );
 
-    for (const nodeMesh of waterMeshes) {
+    for (const nodeMesh of causticsMeshes) {
       // Vertex shader
       nodeMesh.addTransformNode(NodeOperation.ASSIGN, causticsComputationNodeCall);
       nodeMesh.addColorNode(NodeOperation.ASSIGN, causticsIntensityNodeCall);
@@ -249,10 +243,6 @@ class Water extends Effect {
     this.waterMesh = new THREE.Mesh(this.waterGeometry, this.waterMaterial);
     this.waterMesh.matrixAutoUpdate = false;
 
-    // Initialize the light camera
-    this.light = new THREE.Vector3(0., 0., -1.);
-    this.lightCamera = new THREE.OrthographicCamera(-1, 1, 1, -1);
-
     // Create mesh that serves as an initializer for the environment mapping
     // So that we get meaningful values in the environment map by default
     this.initEnvMapMaterial = new THREE.ShaderMaterial({
@@ -264,7 +254,6 @@ class Water extends Effect {
     this.updateLightCamera();
 
     this.waterMaterial.uniforms['light'].value = this.light;
-    this.causticsMaterial.uniforms['light'].value = this.light;
 
     // Event listener for geometry change
     this.parent.on('change:geometry', this.updateWater.bind(this));
@@ -288,36 +277,15 @@ class Water extends Effect {
   }
 
   /**
-   * Update the water geometry and request caustics update.
+   * This will request a caustics update.
    */
   updateWater (): void {
-    this.updateWaterGeometry();
-
-    this.causticsMesh.geometry = this.waterGeometry;
-    this.waterMesh.geometry = this.waterGeometry;
-
     // Request caustics texture update on the next frame.
     this.causticsNeedsUpdate = true;
   }
 
   set causticsFactor(value: number) {
     this._causticsFactor.value = value;
-  }
-
-  private updateWaterGeometry (): void {
-    this.waterGeometry = new THREE.BufferGeometry();
-
-    const vertexBuffer = new THREE.BufferAttribute(this.parent.vertices, 3);
-    this.waterGeometry.setAttribute('position', vertexBuffer);
-
-    if (this.parent.triangleIndices !== null) {
-      const indexBuffer = new THREE.BufferAttribute(this.parent.triangleIndices, 1);
-      this.waterGeometry.setIndex(indexBuffer);
-    } else {
-      this.waterGeometry.setIndex(null);
-    }
-
-    this.waterGeometry.computeVertexNormals();
   }
 
   private updateLightCamera (): void {
@@ -375,7 +343,7 @@ class Water extends Effect {
       }
 
       // Render caustics texture
-      this.causticsMaterial.uniforms['envMap'].value = UnderWater.envMappingTarget.texture;
+      // this.causticsMaterial.uniforms['envMap'].value = UnderWater.envMappingTarget.texture;
 
       renderer.setRenderTarget(this.causticsTarget);
       renderer.setClearColor(black, 0);
@@ -414,20 +382,6 @@ class Water extends Effect {
     this.causticsNeedsUpdate = true;
   }
 
-  // Overwrite the base bounding sphere to take the env into account
-  get boundingSphere () : THREE.Sphere {
-    this.waterGeometry.computeBoundingSphere();
-
-    const boundingSpheres: THREE.Sphere[] = [this.waterGeometry.boundingSphere as THREE.Sphere];
-    for (const underwater of this.underWaterBlocks) {
-      boundingSpheres.push(underwater.boundingSphere);
-    }
-
-    boundingSpheres.sort((a: THREE.Sphere, b: THREE.Sphere) => b.radius - a.radius);
-
-    return boundingSpheres[0];
-  }
-
   // TODO Use the same directional light as the scene
   private light: THREE.Vector3;
   private lightCamera: THREE.OrthographicCamera;
@@ -437,17 +391,16 @@ class Water extends Effect {
 
   private causticsSize: number = 1024;
   private causticsTarget: THREE.WebGLRenderTarget;
-  private causticsMaterial: THREE.ShaderMaterial;
-  private causticsMesh: THREE.Mesh;
+  private causticsMeshes: NodeMesh[];
   private _causticsFactor: Nodes.FloatNode = new Nodes.FloatNode(0.2);
 
   private waterMaterial: THREE.ShaderMaterial;
+  // TODO This should be removed and we should use "this.meshes"
   private waterMesh: THREE.Mesh;
-
-  private waterGeometry: THREE.BufferGeometry;
 
   private initEnvMapMaterial: THREE.ShaderMaterial;
   private initEnvMapMesh: THREE.Mesh;
+  private envMap: Nodes.TextureNode = new Nodes.TextureNode(UnderWater.envMappingTarget.texture);
 
   private underWaterBlocks: UnderWater[] = [];
 

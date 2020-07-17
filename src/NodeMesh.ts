@@ -67,6 +67,8 @@ class NodeMesh {
     this.meshCtor = T;
 
     this.geometry = geometry;
+    this.geometry.computeVertexNormals();
+
     this.material = new Nodes.StandardNodeMaterial();
     this.material.extensions.derivatives = true;
 
