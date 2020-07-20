@@ -10,7 +10,7 @@ import {
 } from '../../Block';
 
 import {
-  NodeOperation
+  NodeMesh, NodeOperation
 } from '../../NodeMesh';
 
 import {
