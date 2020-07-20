@@ -107,8 +107,6 @@ class Water extends Effect {
     this.light = new THREE.Vector3(0., 0., -1.);
     this.lightCamera = new THREE.OrthographicCamera(-1, 1, 1, -1);
 
-    this.updateWaterGeometry();
-
     // Initialize water caustics Mesh
     this.causticsTarget = new THREE.WebGLRenderTarget(this.causticsSize, this.causticsSize, {type: THREE.FloatType});
 
