@@ -141,7 +141,7 @@ class Water extends Effect {
         vec4 projectedEnvPosition = projectionMatrix * viewMatrix * vec4(newPosition, 1.0);
         depth = 0.5 + 0.5 * projectedEnvPosition.z / projectedEnvPosition.w;
 
-        return newPosition;
+        return vec3(newPosition);
       }`
     );
 
@@ -165,7 +165,7 @@ class Water extends Effect {
           float oldArea = length(dFdx(oldPosition)) * length(dFdy(oldPosition));
           float newArea = length(dFdx(newPosition)) * length(dFdy(newPosition));
 
-          causticsIntensity = causticsFactor * ((oldArea / newArea) - 1.);
+          causticsIntensity = causticsFactor * ((oldArea / newArea) - 1.)
         }
 
         return vec3(causticsIntensity);
@@ -197,6 +197,8 @@ class Water extends Effect {
       nodeMesh.material.blendEquationAlpha = THREE.AddEquation;
       nodeMesh.material.blendSrcAlpha = THREE.OneFactor;
       nodeMesh.material.blendDstAlpha = THREE.ZeroFactor;
+
+      nodeMesh.buildMaterial();
     }
 
     // Set the water color and opacity
@@ -298,12 +300,15 @@ class Water extends Effect {
         underwater.renderEnvMap(renderer, this.lightCamera);
       }
 
-      // Render caustics texture
-      // this.causticsMaterial.uniforms['envMap'].value = UnderWater.envMappingTarget.texture;
+      this.envMap.value = UnderWater.envMappingTarget.texture;
 
+      // Render caustics texture
       renderer.setRenderTarget(this.causticsTarget);
+      renderer.setRenderTarget(null);
       renderer.setClearColor(black, 0);
       renderer.clear();
+
+      console.log('hey')
 
       for (const causticsMesh of this.causticsMeshes) {
         renderer.render(causticsMesh.mesh, this.lightCamera);

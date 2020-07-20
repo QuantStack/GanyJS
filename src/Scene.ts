@@ -79,7 +79,8 @@ class Renderer {
     this.camera.position.z = 2;
 
     // Renderer
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    // this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setClearAlpha(0.);
     this.renderer.autoClear = false;
 
@@ -173,13 +174,13 @@ class Renderer {
       }
     }
 
-    this.renderer.setRenderTarget(null);
-    this.renderer.setClearColor(this.clearColor, this.opacity);
-    this.renderer.clear();
+    // this.renderer.setRenderTarget(null);
+    // this.renderer.setClearColor(this.clearColor, this.opacity);
+    // this.renderer.clear();
 
-    this.renderer.render(this.scene.scene, this.camera);
+    // this.renderer.render(this.scene.scene, this.camera);
 
-    this.controls.update();
+    // this.controls.update();
   }
 
   handleCameraMoveEnd () {
