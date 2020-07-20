@@ -42,34 +42,6 @@ void main() {
 }
 `;
 
-// Water shaders
-const waterVertex = `
-varying vec3 norm;
-
-
-void main() {
-  // Interpolate normals
-  norm = normal;
-
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-}
-`;
-
-const waterFragment = `
-uniform vec3 light;
-
-varying vec3 norm;
-
-
-void main() {
-  float light_intensity = - dot(light, norm);
-
-  vec3 color = vec3(0.45, 0.64, 0.74);
-
-  gl_FragColor = vec4(color * light_intensity, 0.7);
-}
-`;
-
 
 export
 interface WaterOptions {
@@ -99,9 +71,8 @@ class Water extends Effect {
       this._causticsFactor = options.causticsFactor !== undefined ? new Nodes.FloatNode(options.causticsFactor) : this._causticsFactor;
     }
 
-    // Remove meshes, only the water and the environment will stay
-    this.causticsMeshes = this.meshes;
-    this.meshes = [];
+    // Shallow copy the water meshes for the caustics computation (Geometries are not copied, we only create new Materials/Shaders)
+    this.causticsMeshes = this.meshes.map((nodeMesh: NodeMesh) => nodeMesh.copy());
 
     // Initialize the light camera
     this.light = new THREE.Vector3(0., 0., -1.);
@@ -228,19 +199,9 @@ class Water extends Effect {
       nodeMesh.material.blendDstAlpha = THREE.ZeroFactor;
     }
 
-    // Initialize water mesh
-    this.waterMaterial = new THREE.ShaderMaterial({
-      uniforms: {
-        light: { value: null },
-      },
-      vertexShader: waterVertex,
-      fragmentShader: waterFragment,
-      transparent: true,
-      side: THREE.DoubleSide
-    });
-
-    this.waterMesh = new THREE.Mesh(this.waterGeometry, this.waterMaterial);
-    this.waterMesh.matrixAutoUpdate = false;
+    // Set the water color and opacity
+    this.addColorNode(NodeOperation.ASSIGN, new Nodes.Vector3Node(0.45, 0.64, 0.74));
+    this.addAlphaNode(NodeOperation.ASSIGN, new Nodes.FloatNode(0.7));
 
     // Create mesh that serves as an initializer for the environment mapping
     // So that we get meaningful values in the environment map by default
@@ -251,8 +212,6 @@ class Water extends Effect {
     this.initEnvMapMesh = new THREE.Mesh(new THREE.PlaneBufferGeometry(2, 2), this.initEnvMapMaterial);
 
     this.updateLightCamera();
-
-    this.waterMaterial.uniforms['light'].value = this.light;
 
     // Event listener for geometry change
     this.parent.on('change:geometry', this.updateWater.bind(this));
@@ -267,8 +226,6 @@ class Water extends Effect {
    */
   addToScene (scene: THREE.Scene) {
     super.addToScene(scene);
-
-    scene.add(this.waterMesh);
 
     for (const underwater of this.underWaterBlocks) {
       underwater.addToScene(scene);
@@ -367,8 +324,9 @@ class Water extends Effect {
     this.causticsMesh.matrix.copy(matrix);
     this.causticsMesh.updateMatrixWorld(true);
 
-    this.waterMesh.matrix.copy(matrix);
-    this.waterMesh.updateMatrixWorld(true);
+    for (const watermesh of this.meshes) {
+      watermesh.setMatrix(matrix);
+    }
 
     for (const underwater of this.underWaterBlocks) {
       underwater.setMatrix(matrix);
@@ -392,10 +350,6 @@ class Water extends Effect {
   private causticsTarget: THREE.WebGLRenderTarget;
   private causticsMeshes: NodeMesh[];
   private _causticsFactor: Nodes.FloatNode = new Nodes.FloatNode(0.2);
-
-  private waterMaterial: THREE.ShaderMaterial;
-  // TODO This should be removed and we should use "this.meshes"
-  private waterMesh: THREE.Mesh;
 
   private initEnvMapMaterial: THREE.ShaderMaterial;
   private initEnvMapMesh: THREE.Mesh;
