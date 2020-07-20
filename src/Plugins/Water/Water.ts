@@ -306,7 +306,7 @@ class Water extends Effect {
       renderer.clear();
 
       for (const causticsMesh of this.causticsMeshes) {
-        renderer.render(causticsMesh, this.lightCamera);
+        renderer.render(causticsMesh.mesh, this.lightCamera);
       }
 
       for (const underwater of this.underWaterBlocks) {
