@@ -105,6 +105,7 @@ class Water extends Effect {
 
     // Initialize the light camera
     this.light = new THREE.Vector3(0., 0., -1.);
+    const lightNode = new Nodes.Vector3Node(this.light);
     this.lightCamera = new THREE.OrthographicCamera(-1, 1, 1, -1);
 
     // Initialize water caustics Mesh
@@ -182,7 +183,7 @@ class Water extends Effect {
 
     const causticsComputationNodeCall = new Nodes.FunctionCallNode(
       causticsComputationNode,
-      [this.envMap, new Nodes.FloatNode(1. / UnderWater.envMapSize), new Nodes.PositionNode(), this.light]
+      [this.envMap, new Nodes.FloatNode(1. / UnderWater.envMapSize), new Nodes.PositionNode(), lightNode]
     );
 
     const causticsIntensityNode = new Nodes.FunctionNode(
