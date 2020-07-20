@@ -206,7 +206,7 @@ class Water extends Effect {
       [oldPositionVarying, newPositionVarying, waterDepthVarying, depthVarying, this._causticsFactor]
     );
 
-    for (const nodeMesh of causticsMeshes) {
+    for (const nodeMesh of this.causticsMeshes) {
       // Vertex shader
       nodeMesh.addTransformNode(NodeOperation.ASSIGN, causticsComputationNodeCall);
       nodeMesh.addColorNode(NodeOperation.ASSIGN, causticsIntensityNodeCall);
