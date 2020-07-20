@@ -305,7 +305,9 @@ class Water extends Effect {
       renderer.setClearColor(black, 0);
       renderer.clear();
 
-      renderer.render(this.causticsMesh, this.lightCamera);
+      for (const causticsMesh of this.causticsMeshes) {
+        renderer.render(causticsMesh, this.lightCamera);
+      }
 
       for (const underwater of this.underWaterBlocks) {
         underwater.setCausticsTexture(this.causticsTarget.texture);
@@ -321,11 +323,12 @@ class Water extends Effect {
 
     const matrix = new THREE.Matrix4().multiplyMatrices(scaleMatrix, positionMatrix);
 
-    this.causticsMesh.matrix.copy(matrix);
-    this.causticsMesh.updateMatrixWorld(true);
-
     for (const watermesh of this.meshes) {
       watermesh.setMatrix(matrix);
+    }
+
+    for (const causticsmesh of this.causticsMeshes) {
+      causticsmesh.setMatrix(matrix);
     }
 
     for (const underwater of this.underWaterBlocks) {
