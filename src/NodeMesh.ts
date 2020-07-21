@@ -162,11 +162,10 @@ class NodeMesh {
     this.material.build();
   }
 
-  copy (meshCtor?: MeshConstructor, materialCtor?: MaterialConstructor) {
-    const meshConstructor = meshCtor ? meshCtor : this.meshCtor;
+  copy (materialCtor?: MaterialConstructor) {
     const materialConstructor = materialCtor ? materialCtor : this.materialCtor;
 
-    const copy = new NodeMesh(meshConstructor, materialConstructor, this.geometry, this.data);
+    const copy = new NodeMesh(this.meshCtor, materialConstructor, this.geometry, this.data);
 
     copy.hasIndex = this.hasIndex;
 
