@@ -88,6 +88,8 @@ class Threshold extends Effect {
 
     this.buildMaterial();
 
+    this.parent.on('change:geometry', () => { this.trigger('change:geometry'); });
+
     this.initialized = true;
   }
 
