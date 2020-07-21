@@ -92,7 +92,7 @@ class Water extends Effect {
     const depthVarying = new Nodes.VarNode('float');
 
     const causticsComputationNode = new Nodes.FunctionNode(
-      `vec3 causticsFunc${this.id}(sampler2D envMap, float deltaEnvMapTexture, vec3 position, vec3 light){
+      `vec4 causticsFunc${this.id}(sampler2D envMap, float deltaEnvMapTexture, vec3 position, vec3 light){
         // Air refractive index / Water refractive index
         const float eta = 0.7504;
 
@@ -145,7 +145,7 @@ class Water extends Effect {
         vec4 projectedEnvPosition = projectionMatrix * viewMatrix * vec4(newPosition, 1.0);
         depth = 0.5 + 0.5 * projectedEnvPosition.z / projectedEnvPosition.w;
 
-        return vec3(newPosition);
+        return projectedEnvPosition;
       }`
     );
 

@@ -28,24 +28,20 @@ class BasicNode extends Nodes.Node {
     if (builder.isShader('vertex')) {
 
       // @ts-ignore: https://github.com/mrdoob/three.js/pull/19896
-      const position: Flow | undefined = this.position ? this.position.analyzeAndFlow(builder, 'v3', { cache: 'position' }) : undefined;
+      const position: Flow | undefined = this.position ? this.position.analyzeAndFlow(builder, 'v4', { cache: 'position' }) : undefined;
 
       const output = [
-        "#include <begin_vertex>"
+        "vec3 transformed = position;"
       ];
 
       if (position) {
         output.push(
           position.code,
-          position.result ? "transformed = " + position.result + ";" : ''
+          position.result ? "gl_Position = " + position.result + ";" : ''
         );
       }
 
-      output.push(
-        "#include <worldpos_vertex>",
-      );
-
-      code = output.join( "\n" );
+      code = output.join("\n");
     } else {
       // Analyze all nodes to reuse generate codes
       this.color.analyze(builder, { slot: 'color' });
