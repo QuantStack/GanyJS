@@ -14,6 +14,10 @@ import {
 } from '../../NodeMesh';
 
 import {
+  BasicNodeMaterial
+} from '../../utils/BasicNodeMaterial';
+
+import {
   UnderWater
 } from './UnderWater';
 
@@ -71,8 +75,8 @@ class Water extends Effect {
       this._causticsFactor = options.causticsFactor !== undefined ? new Nodes.FloatNode(options.causticsFactor) : this._causticsFactor;
     }
 
-    // Shallow copy the water meshes for the caustics computation (Geometries are not copied, we only create new Materials/Shaders)
-    this.causticsMeshes = this.meshes.map((nodeMesh: NodeMesh) => nodeMesh.copy());
+    // Shallow copy the water meshes for the caustics computation (Geometries are not copied, we only create new Materials using BasicNodeMaterial)
+    this.causticsMeshes = this.meshes.map((nodeMesh: NodeMesh) => nodeMesh.copy(BasicNodeMaterial));
 
     // Initialize the light camera
     this.light = new THREE.Vector3(0., 0., -1.);
