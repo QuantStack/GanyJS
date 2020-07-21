@@ -165,7 +165,7 @@ class Water extends Effect {
           float oldArea = length(dFdx(oldPosition)) * length(dFdy(oldPosition));
           float newArea = length(dFdx(newPosition)) * length(dFdy(newPosition));
 
-          causticsIntensity = causticsFactor * ((oldArea / newArea) - 1.)
+          causticsIntensity = causticsFactor * ((oldArea / newArea) - 1.);
         }
 
         return vec3(causticsIntensity);
@@ -304,11 +304,8 @@ class Water extends Effect {
 
       // Render caustics texture
       renderer.setRenderTarget(this.causticsTarget);
-      renderer.setRenderTarget(null);
       renderer.setClearColor(black, 0);
       renderer.clear();
-
-      console.log('hey')
 
       for (const causticsMesh of this.causticsMeshes) {
         renderer.render(causticsMesh.mesh, this.lightCamera);

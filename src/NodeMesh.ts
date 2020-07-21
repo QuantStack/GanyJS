@@ -178,6 +178,7 @@ class NodeMesh {
 
   set matrix (matrix: THREE.Matrix4) {
     this.mesh.matrix.copy(matrix);
+    this.mesh.updateMatrixWorld(true);
   }
 
   get boundingSphere () : THREE.Sphere {
