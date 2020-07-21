@@ -10,13 +10,19 @@ class BasicNodeMaterial extends Nodes.NodeMaterial {
   constructor () {
     const node = new BasicNode();
 
+    // @ts-ignore: https://github.com/mrdoob/three.js/pull/19897
     super(node, node);
   }
+
+  color: Node;
+  alpha: Node;
+  position: Node;
 
   type: string = "BasicNodeMaterial";
 
 }
 
+// @ts-ignore
 Nodes.NodeUtils.addShortcuts(BasicNodeMaterial.prototype, 'fragment', [
   'color',
   'alpha',

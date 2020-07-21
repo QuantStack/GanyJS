@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import * as Nodes from 'three/examples/jsm/nodes/Nodes';
 
 import {
   NodeMesh
@@ -32,7 +33,7 @@ class PolyMesh extends Block {
     this.geometry.setAttribute('position', vertexBuffer);
     this.geometry.setIndex(indexBuffer);
 
-    this.mesh = new NodeMesh(THREE.Mesh, this.geometry, this.data);
+    this.mesh = new NodeMesh(THREE.Mesh, Nodes.StandardNodeMaterial, this.geometry, this.data);
     this.meshes.push(this.mesh);
 
     this.buildMaterial();
@@ -107,7 +108,8 @@ class PointCloud extends Block {
 
     this.geometry.setAttribute('position', vertexBuffer);
 
-    this.mesh = new NodeMesh(THREE.Points, this.geometry, this.data);
+    // TODO Create a specific NodeMaterial class for Point cloud?
+    this.mesh = new NodeMesh(THREE.Points, Nodes.StandardNodeMaterial, this.geometry, this.data);
     this.meshes.push(this.mesh);
 
     this.buildMaterial();
