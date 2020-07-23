@@ -111,6 +111,8 @@ class NodeMesh {
       const newVertexBuffer = new THREE.BufferAttribute(vertices, 3);
       this.geometry.setAttribute('position', newVertexBuffer);
     }
+
+    this.geometry.computeVertexNormals();
   }
 
   updateData (dict: DataDict) {
