@@ -35,7 +35,12 @@ class Alpha extends Effect {
 
     this.sortTriangleIndices();
 
-    this.parent.on('change:geometry', this.sortTriangleIndices.bind(this));
+    // There is no new geometry specific to this effect, we forward the parent event
+    this.parent.on('change:geometry', () => {
+      this.sortTriangleIndices.bind(this);
+
+      this.trigger('change:geometry');
+    });
 
     this.initialized = true;
     this.updateMatrix();

@@ -84,11 +84,13 @@ class Threshold extends Effect {
       this.meshes.push(this.mesh2);
 
       this.inputComponent.on('change:array', this.onInputArrayChange.bind(this));
+    } else {
+      // There is no new geometry specific to this effect, we forward the parent event
+      this.parent.on('change:geometry', () => { this.trigger('change:geometry'); });
     }
 
     this.buildMaterial();
 
-    this.parent.on('change:geometry', () => { this.trigger('change:geometry'); });
 
     this.initialized = true;
   }
