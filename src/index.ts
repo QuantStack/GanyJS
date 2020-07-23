@@ -10,4 +10,3 @@ export * from './MeshBlock';
 export * from './EffectBlock';
 
 export * from './Effects/effects';
-export * from './Plugins/plugins';

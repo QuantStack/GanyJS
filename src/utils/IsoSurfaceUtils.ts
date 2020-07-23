@@ -1,6 +1,7 @@
 const BinaryTree: any = require('binary-search-tree');
 
 import * as THREE from 'three';
+import * as Nodes from 'three/examples/jsm/nodes/Nodes';
 
 import {
   TypedArray
@@ -41,7 +42,7 @@ class IsoSurfaceUtils {
     this.geometry.setAttribute('position', vertexBuffer);
 
     const dataShallowCopy = this.initialData.map((data: Data) => data.copy(false));
-    this._isoSurfaceMesh = new NodeMesh(THREE.Mesh, this.geometry, dataShallowCopy);
+    this._isoSurfaceMesh = new NodeMesh(THREE.Mesh, Nodes.StandardNodeMaterial, this.geometry, dataShallowCopy);
   }
 
   updateInput (inputDataArray: TypedArray) {

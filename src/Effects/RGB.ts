@@ -34,6 +34,10 @@ class RGB extends Effect {
     this.buildMaterial();
 
     this.initialized = true;
+
+    // There is no new geometry specific to this effect, we forward the parent event
+    this.parent.on('change:geometry', () => { this.trigger('change:geometry'); });
+
     this.updateMatrix();
   }
 

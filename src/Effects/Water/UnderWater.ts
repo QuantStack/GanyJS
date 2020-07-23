@@ -145,9 +145,9 @@ float noise(vec2 st) {
             dot(random2(i + vec2(1.0, 0.0)), f - vec2(1.0, 0.0)),
             u.x
         ),
-    mix(
+        mix(
             dot(random2(i + vec2(0.0, 1.0)), f - vec2(0.0, 1.0)),
-      dot(random2(i + vec2(1.0, 1.0) ), f - vec2(1.0, 1.0)),
+            dot(random2(i + vec2(1.0, 1.0) ), f - vec2(1.0, 1.0)),
             u.x
         ),
         u.y

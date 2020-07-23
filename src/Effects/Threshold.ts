@@ -55,6 +55,7 @@ class Threshold extends Effect {
     // Returns 1 if input > min, 0 otherwise
     this.isOverMin = new Nodes.MathNode(this.minNode, this.inputNode, Nodes.MathNode.STEP);
 
+    // TODO: Use a mask node instead of an alpha node?
     this.thresholdAlpha = new Nodes.OperatorNode(this.isUnderMax, this.isOverMin, Nodes.OperatorNode.MUL);
 
     this.addAlphaNode(NodeOperation.MUL, this.thresholdAlpha);
@@ -83,9 +84,13 @@ class Threshold extends Effect {
       this.meshes.push(this.mesh2);
 
       this.inputComponent.on('change:array', this.onInputArrayChange.bind(this));
+    } else {
+      // There is no new geometry specific to this effect, we forward the parent event
+      this.parent.on('change:geometry', () => { this.trigger('change:geometry'); });
     }
 
     this.buildMaterial();
+
 
     this.initialized = true;
   }

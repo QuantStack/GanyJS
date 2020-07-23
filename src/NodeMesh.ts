@@ -5,6 +5,10 @@ import {
   Data, DataDict
 } from './Data';
 
+import {
+  BasicNodeMaterial
+} from './utils/BasicNodeMaterial';
+
 
 export
 enum NodeOperation {
@@ -16,7 +20,10 @@ enum NodeOperation {
 }
 
 export
-type MeshConstructor = new (geometry: THREE.BufferGeometry, material: Nodes.StandardNodeMaterial) => THREE.Object3D;
+type MeshConstructor = new (geometry: THREE.BufferGeometry, material: Nodes.NodeMaterial) => THREE.Object3D;
+
+export
+type MaterialConstructor = new () => Nodes.StandardNodeMaterial | BasicNodeMaterial;
 
 export
 type NodeOperationResult<T extends Nodes.Node> = T | Nodes.OperatorNode;
@@ -63,11 +70,15 @@ class NodeOperator<T extends Nodes.Node> {
 export
 class NodeMesh {
 
-  constructor (T: MeshConstructor, geometry: THREE.BufferGeometry, data: Data[]) {
-    this.meshCtor = T;
+  constructor (MeshT: MeshConstructor, MaterialT: MaterialConstructor, geometry: THREE.BufferGeometry, data: Data[]) {
+    this.meshCtor = MeshT;
+    this.materialCtor = MaterialT;
 
     this.geometry = geometry;
-    this.material = new Nodes.StandardNodeMaterial();
+    this.geometry.computeVertexNormals();
+
+    this.material = new MaterialT();
+    this.material.extensions.derivatives = true;
 
     this.data = data;
 
@@ -80,7 +91,7 @@ class NodeMesh {
 
     this.hasIndex = this.geometry.index != null;
 
-    this.mesh = new T(geometry, this.material);
+    this.mesh = new MeshT(geometry, this.material);
 
     // We need to set this to false because we directly play with the position matrix
     this.mesh.matrixAutoUpdate = false;
@@ -100,6 +111,8 @@ class NodeMesh {
       const newVertexBuffer = new THREE.BufferAttribute(vertices, 3);
       this.geometry.setAttribute('position', newVertexBuffer);
     }
+
+    this.geometry.computeVertexNormals();
   }
 
   updateData (dict: DataDict) {
@@ -142,7 +155,7 @@ class NodeMesh {
     this.material.color = color;
 
     // Workaround for https://github.com/mrdoob/three.js/issues/18152
-    if (this.mesh.type == 'Points') {
+    if (this.mesh.type == 'Points' && this.material instanceof Nodes.StandardNodeMaterial) {
       this.material.normal = new Nodes.Vector3Node(1, 1, 1);
     }
 
@@ -151,8 +164,10 @@ class NodeMesh {
     this.material.build();
   }
 
-  copy () {
-    const copy = new NodeMesh(this.meshCtor, this.geometry, this.data);
+  copy (materialCtor?: MaterialConstructor) {
+    const materialConstructor = materialCtor ? materialCtor : this.materialCtor;
+
+    const copy = new NodeMesh(this.meshCtor, materialConstructor, this.geometry, this.data);
 
     copy.hasIndex = this.hasIndex;
 
@@ -175,6 +190,7 @@ class NodeMesh {
 
   set matrix (matrix: THREE.Matrix4) {
     this.mesh.matrix.copy(matrix);
+    this.mesh.updateMatrixWorld(true);
   }
 
   get boundingSphere () : THREE.Sphere {
@@ -290,11 +306,12 @@ class NodeMesh {
   }
 
   geometry: THREE.BufferGeometry;
-  material: Nodes.StandardNodeMaterial;
+  material: Nodes.StandardNodeMaterial | BasicNodeMaterial;
   mesh: THREE.Object3D;
   readonly data: Data[];
 
   private meshCtor: MeshConstructor;
+  private materialCtor: MaterialConstructor;
 
   private transformOperators: NodeOperator<Nodes.Node>[] = [];
   private alphaOperators: NodeOperator<Nodes.Node>[] = [];
