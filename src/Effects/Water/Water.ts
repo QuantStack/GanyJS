@@ -62,7 +62,6 @@ interface WaterOptions {
 /**
  * Displays beautiful water and computes real-time caustics.
  **/
-// TODO Inherit from something else than Effect
 export
 class Water extends Effect {
 
