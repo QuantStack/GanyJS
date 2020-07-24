@@ -176,7 +176,7 @@ abstract class Block extends Events {
     return block.boundingSphere;
   }
 
-  set defaultColor (defaultColor: string) {
+  set defaultColor (defaultColor: THREE.Color) {
     for (const nodeMesh of this.meshes) {
       nodeMesh.defaultColor = defaultColor;
     }

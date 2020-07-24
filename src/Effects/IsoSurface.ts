@@ -5,7 +5,7 @@ import {
 } from '../EffectBlock';
 
 import {
-  Block
+  Block, BlockOptions
 } from '../Block';
 
 import {
@@ -22,7 +22,7 @@ import {
 
 
 export
-interface IsoSurfaceOptions {
+interface IsoSurfaceOptions extends BlockOptions {
 
   value?: number;
 
@@ -35,7 +35,7 @@ export
 class IsoSurface extends Effect {
 
   constructor (parent: Block, input: Input, options?: IsoSurfaceOptions) {
-    super(parent, input);
+    super(parent, input, options);
 
     if (this.parent.tetrahedronIndices == null) {
       throw 'Cannot compute IsoSurface on a Mesh that is not tetrahedron-based';

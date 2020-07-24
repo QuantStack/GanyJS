@@ -9,7 +9,7 @@ import {
 } from '../../Data';
 
 import {
-  Block
+  Block, BlockOptions
 } from '../../Block';
 
 
@@ -87,6 +87,7 @@ void main(void){
 const getEnvFragment = (underwater: String) => `
 uniform vec3 light;
 uniform sampler2D caustics;
+uniform vec3 defaultColor;
 
 #ifdef USE_TEXTURING
 uniform sampler2D envTexture;
@@ -96,7 +97,6 @@ uniform sampler2D envTexture;
 const vec2 resolution = vec2(1024.);
 const float scale = 1. / 0.5;
 const vec2 sandTextureResolution = vec2(512, 512);
-const vec3 sandColor = vec3(0.951, 1., 0.825);
 
 vec3 texColor;
 
@@ -167,9 +167,9 @@ void main() {
   vec3 zaxis = texture2D(envTexture, worldPosition.xy * scale).xyz;
 #else
   // Tri-planar mapping on the generated sand texture
-  vec3 xaxis = vec3(noise(worldPosition.yz * 100. * scale) * 0.2 + 0.9) * sandColor;
-  vec3 yaxis = vec3(noise(worldPosition.xz * 100. * scale) * 0.2 + 0.9) * sandColor;
-  vec3 zaxis = vec3(noise(worldPosition.xy * 100. * scale) * 0.2 + 0.9) * sandColor;
+  vec3 xaxis = vec3(noise(worldPosition.yz * 100. * scale) * 0.2 + 0.9) * defaultColor;
+  vec3 yaxis = vec3(noise(worldPosition.xz * 100. * scale) * 0.2 + 0.9) * defaultColor;
+  vec3 zaxis = vec3(noise(worldPosition.xy * 100. * scale) * 0.2 + 0.9) * defaultColor;
 #endif
   texColor = xaxis * textureBlending.x + yaxis * textureBlending.y + zaxis * textureBlending.z;
 
@@ -195,19 +195,34 @@ void main() {
 `;
 
 
+export
+interface UnderWaterOptions extends BlockOptions {
+
+  defaultColor?: THREE.Color;
+
+  texture?: THREE.Texture;
+
+}
+
+
 /**
  * Block that receives the caustics.
  **/
 export
 class UnderWater extends Effect {
 
-  constructor (parent: Block, input: Input) {
-    super(parent, input);
+  constructor (parent: Block, input: Input, options?: UnderWaterOptions) {
+    super(parent, input, options);
 
     // Remove meshes, we won't use NodeMeshes here
     this.meshes = [];
 
     this.inputComponent = this.inputs[0];
+
+    if (options) {
+      this._defaultColor = options.defaultColor !== undefined ? options.defaultColor : this._defaultColor;
+      this._texture = options.texture !== undefined ? options.texture : this._texture;
+    }
 
     // Initialize environment mapping and environment material
     this.envMappingMaterial = new THREE.ShaderMaterial({
@@ -221,12 +236,13 @@ class UnderWater extends Effect {
       uniforms: {
         light: { value: null },
         caustics: { value: null },
-        envTexture: { value: null },
+        envTexture: { value: this._texture },
+        defaultColor: { value: this._defaultColor },
         lightProjectionMatrix: { value: null },
         lightViewMatrix: { value: null }
       },
       defines: {
-        USE_TEXTURING: false
+        USE_TEXTURING: this._texture !== null
       },
       extensions: {
         derivatives: true
@@ -274,18 +290,25 @@ class UnderWater extends Effect {
     this.envMaterial.uniforms['caustics'].value = causticsTexture;
   }
 
-  setTexture (texture: THREE.Texture | null) {
-    if (texture === null) {
+  set defaultColor (value: THREE.Color) {
+    this._defaultColor = value;
+    this.envMaterial.uniforms['defaultColor'].value = value;
+  }
+
+  set texture (texture: THREE.Texture | null) {
+    this._texture = texture;
+
+    if (this._texture === null) {
       this.envMaterial.uniforms['envTexture'].value = null;
       this.envMaterial.defines['USE_TEXTURING'] = false;
 
       return;
     }
 
-    texture.wrapS = THREE.RepeatWrapping;
-    texture.wrapT = THREE.RepeatWrapping;
+    this._texture.wrapS = THREE.RepeatWrapping;
+    this._texture.wrapT = THREE.RepeatWrapping;
 
-    this.envMaterial.uniforms['envTexture'].value = texture;
+    this.envMaterial.uniforms['envTexture'].value = this._texture;
     this.envMaterial.defines['USE_TEXTURING'] = true;
   }
 
@@ -333,6 +356,8 @@ class UnderWater extends Effect {
   private envMeshes: THREE.Mesh[];
 
   private envMaterial: THREE.ShaderMaterial;
+  private _defaultColor: THREE.Color = new THREE.Color(0.951, 1., 0.825);
+  private _texture: THREE.Texture | null = null;
 
   private initialized: boolean = false;
   private inputComponent: Component;
