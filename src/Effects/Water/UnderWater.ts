@@ -301,15 +301,15 @@ class UnderWater extends Effect {
     if (this._texture === null) {
       this.envMaterial.uniforms['envTexture'].value = null;
       this.envMaterial.defines['USE_TEXTURING'] = false;
+    } else {
+      this._texture.wrapS = THREE.RepeatWrapping;
+      this._texture.wrapT = THREE.RepeatWrapping;
 
-      return;
+      this.envMaterial.uniforms['envTexture'].value = this._texture;
+      this.envMaterial.defines['USE_TEXTURING'] = true;
     }
 
-    this._texture.wrapS = THREE.RepeatWrapping;
-    this._texture.wrapT = THREE.RepeatWrapping;
-
-    this.envMaterial.uniforms['envTexture'].value = this._texture;
-    this.envMaterial.defines['USE_TEXTURING'] = true;
+    this.envMaterial.needsUpdate = true;
   }
 
   renderEnvMap (renderer: THREE.WebGLRenderer, lightCamera: THREE.Camera) {
