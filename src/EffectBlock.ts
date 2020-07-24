@@ -9,7 +9,7 @@ import {
 } from './NodeMesh';
 
 import {
-  Block
+  Block, BlockOptions
 } from './Block';
 
 import {
@@ -37,7 +37,7 @@ type Input = string | ([string, string] | number)[];
 export
 class Effect extends Block {
 
-  constructor (parent: Block, input?: Input) {
+  constructor (parent: Block, input?: Input, options?: BlockOptions) {
     super(parent.vertices, parent.data, parent.options);
 
     this.parent = parent;

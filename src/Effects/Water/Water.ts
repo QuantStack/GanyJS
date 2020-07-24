@@ -6,7 +6,7 @@ import {
 } from '../../EffectBlock';
 
 import {
-  Block
+  Block, BlockOptions
 } from '../../Block';
 
 import {
@@ -48,7 +48,7 @@ void main() {
 
 
 export
-interface WaterOptions {
+interface WaterOptions extends BlockOptions {
 
   causticsEnabled?: boolean;
 
@@ -66,7 +66,7 @@ export
 class Water extends Effect {
 
   constructor (parent: Block, options?: WaterOptions) {
-    super(parent);
+    super(parent, undefined, options);
 
     if (options) {
       this.causticsEnabled = options.causticsEnabled !== undefined ? options.causticsEnabled : this.causticsEnabled;

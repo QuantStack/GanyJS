@@ -5,7 +5,7 @@ import {
 } from '../EffectBlock';
 
 import {
-  Block
+  Block, BlockOptions
 } from '../Block';
 
 import {
@@ -22,7 +22,7 @@ import {
 
 
 export
-interface ThresholdOptions {
+interface ThresholdOptions extends BlockOptions {
 
   min?: number;
   max?: number;
@@ -36,7 +36,7 @@ export
 class Threshold extends Effect {
 
   constructor (parent: Block, input: Input, options?: ThresholdOptions) {
-    super(parent, input);
+    super(parent, input, options);
 
     if (options) {
       this._min = options.min !== undefined ? options.min : this._min;

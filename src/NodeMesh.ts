@@ -96,7 +96,7 @@ class NodeMesh {
     // We need to set this to false because we directly play with the position matrix
     this.mesh.matrixAutoUpdate = false;
 
-    this._defaultColor = '#6395b0';
+    this._defaultColor = new THREE.Color('#6395b0');
     this.defaultColorNode = new Nodes.ColorNode(this._defaultColor);
   }
 
@@ -198,10 +198,10 @@ class NodeMesh {
     return this.geometry.boundingSphere as THREE.Sphere;
   }
 
-  set defaultColor (defaultColor: string) {
+  set defaultColor (defaultColor: THREE.Color) {
     this._defaultColor = defaultColor;
 
-    this.defaultColorNode.value = new THREE.Color(this._defaultColor);
+    this.defaultColorNode.value = this._defaultColor;
   }
 
   get defaultColor () {
@@ -317,7 +317,7 @@ class NodeMesh {
   private alphaOperators: NodeOperator<Nodes.Node>[] = [];
   private colorOperators: NodeOperator<Nodes.Node>[] = [];
 
-  private _defaultColor: string;
+  private _defaultColor: THREE.Color;
   private defaultColorNode: Nodes.ColorNode;
 
   private hasIndex: boolean;
