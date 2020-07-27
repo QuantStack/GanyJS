@@ -138,6 +138,17 @@ class Effect extends Block {
     this.buildMaterial();
   }
 
+  /**
+   * Add an expression node to materials
+   */
+  addExpressionNode (expressionNode: Nodes.Node) {
+    for (const nodeMesh of this.meshes) {
+      nodeMesh.addExpressionNode(expressionNode);
+    }
+
+    this.buildMaterial();
+  }
+
   get inputDimension () : InputDimension {
     return 0;
   }

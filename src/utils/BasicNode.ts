@@ -28,18 +28,46 @@ class BasicNode extends Nodes.Node {
     if (builder.isShader('vertex')) {
 
       // @ts-ignore: https://github.com/mrdoob/three.js/pull/19896
-      const position: Flow | undefined = this.position ? this.position.analyzeAndFlow(builder, 'v4', { cache: 'position' }) : undefined;
+      const position: Flow | undefined = this.position ? this.position.analyzeAndFlow(builder, 'v3', { cache: 'position' }) : undefined;
+
+      // @ts-ignore
+      builder.addParsCode( [
+        "varying vec3 vViewPosition;",
+
+        "#ifndef FLAT_SHADED",
+
+        " varying vec3 vNormal;",
+
+        "#endif",
+      ].join( "\n" ) );
 
       const output = [
-        "vec3 transformed = position;"
+        "#include <beginnormal_vertex>",
+        "#include <defaultnormal_vertex>",
+
+        "#ifndef FLAT_SHADED", // Normal computed with derivatives when FLAT_SHADED
+
+        " vNormal = normalize( transformedNormal );",
+
+        "#endif",
+
+        "#include <begin_vertex>",
       ];
 
       if (position) {
         output.push(
           position.code,
-          position.result ? "gl_Position = " + position.result + ";" : ''
+          position.result ? "transformed = " + position.result + ";" : ''
         );
       }
+
+      output.push(
+        "#include <project_vertex>",
+
+        " vViewPosition = - mvPosition.xyz;",
+
+        "#include <worldpos_vertex>",
+      );
 
       code = output.join("\n");
     } else {
@@ -55,20 +83,34 @@ class BasicNode extends Nodes.Node {
       const alpha: Flow | undefined = this.alpha ? this.alpha.flow( builder, 'f' ) : undefined;
 
       // @ts-ignore: See https://github.com/mrdoob/three.js/pull/19895
-      builder.requires.transparent = alpha !== undefined;
+      // builder.requires.transparent = alpha !== undefined;
+
+      // @ts-ignore
+      builder.addParsCode( [
+        "varying vec3 vViewPosition;",
+
+        "#ifndef FLAT_SHADED",
+
+        " varying vec3 vNormal;",
+
+        "#endif",
+      ].join( "\n" ) );
 
       const output = [
-        color.code,
+        // add before: prevent undeclared normal
+        " #include <normal_fragment_begin>",
       ];
+
+      output.push(color.code);
 
       if (alpha) {
         output.push(
           alpha.code,
-          '#ifdef ALPHATEST',
+          // '#ifdef ALPHATEST',
 
-          ' if ( ' + alpha.result + ' <= ALPHATEST ) discard;',
+          // ' if ( ' + alpha.result + ' <= ALPHATEST ) discard;',
 
-          '#endif'
+          // '#endif'
         );
       }
 
