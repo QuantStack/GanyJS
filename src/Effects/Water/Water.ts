@@ -91,7 +91,7 @@ class Water extends Effect {
     const depthVarying = new Nodes.VarNode('float');
 
     const causticsComputationNode = new Nodes.FunctionNode(
-      `vec4 causticsFunc${this.id}(sampler2D envMap, float deltaEnvMapTexture, vec3 position, vec3 light){
+      `vec3 causticsFunc${this.id}(sampler2D envMap, float deltaEnvMapTexture, vec3 position, vec3 light){
         // Air refractive index / Water refractive index
         const float eta = 0.7504;
 
@@ -144,7 +144,8 @@ class Water extends Effect {
         vec4 projectedEnvPosition = projectionMatrix * viewMatrix * vec4(newPosition, 1.0);
         depth = 0.5 + 0.5 * projectedEnvPosition.z / projectedEnvPosition.w;
 
-        return projectedEnvPosition;
+        // This is needed for discarding the modelMatrix multiplication
+        return (inverse(modelMatrix) * vec4(newPosition, 1.0)).xyz;
       }`
     );
 
@@ -157,6 +158,7 @@ class Water extends Effect {
 
     const causticsComputationNodeCall = new Nodes.FunctionCallNode(
       causticsComputationNode,
+      // TODO Find a smarter way to have the position, this will not take Warp into account for example
       [this.envMap, new Nodes.FloatNode(1. / UnderWater.envMapSize), new Nodes.PositionNode(), lightNode]
     );
 
@@ -183,9 +185,9 @@ class Water extends Effect {
     for (const nodeMesh of this.causticsMeshes) {
       // Vertex shader
       nodeMesh.addTransformNode(NodeOperation.ASSIGN, causticsComputationNodeCall);
-      nodeMesh.addColorNode(NodeOperation.ASSIGN, causticsIntensityNodeCall);
 
       // Fragment shader
+      nodeMesh.addColorNode(NodeOperation.ASSIGN, causticsIntensityNodeCall);
       nodeMesh.addAlphaNode(NodeOperation.ASSIGN, depthVarying);
 
       nodeMesh.material.blending = THREE.CustomBlending;

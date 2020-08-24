@@ -147,6 +147,10 @@ class NodeMesh {
       alpha = alphaOperator.operate(alpha);
     }
 
+    for (const expressionNode of this.expressionNodes) {
+      position = new Nodes.BypassNode(expressionNode, position);
+    }
+
     this.material.flatShading = true;
     this.material.side = THREE.DoubleSide;
 
@@ -174,6 +178,7 @@ class NodeMesh {
     copy.transformOperators = this.transformOperators.slice();
     copy.alphaOperators = this.alphaOperators.slice();
     copy.colorOperators = this.colorOperators.slice();
+    copy.expressionNodes = this.expressionNodes.slice();
 
     copy.defaultColor = this.defaultColor;
 
@@ -184,6 +189,7 @@ class NodeMesh {
     this.transformOperators = other.transformOperators.slice();
     this.alphaOperators = other.alphaOperators.slice();
     this.colorOperators = other.colorOperators.slice();
+    this.expressionNodes = other.expressionNodes.slice();
 
     this.defaultColor = other.defaultColor;
   }
@@ -227,6 +233,13 @@ class NodeMesh {
    */
   addAlphaNode (operation: NodeOperation, alphaNode: Nodes.Node) {
     this.alphaOperators.push(new NodeOperator<Nodes.Node>(operation, alphaNode));
+  }
+
+  /**
+   * Add an expression node to this mesh material
+   */
+  addExpressionNode (expressionNode: Nodes.Node) {
+    this.expressionNodes.push(expressionNode);
   }
 
   /**
@@ -316,6 +329,7 @@ class NodeMesh {
   private transformOperators: NodeOperator<Nodes.Node>[] = [];
   private alphaOperators: NodeOperator<Nodes.Node>[] = [];
   private colorOperators: NodeOperator<Nodes.Node>[] = [];
+  private expressionNodes: Nodes.Node[] = [];
 
   private _defaultColor: THREE.Color;
   private defaultColorNode: Nodes.ColorNode;
