@@ -12,6 +12,19 @@ import {
   Data
 } from './Data';
 
+export
+interface BeforeRenderHookOptions {
+
+  scene: THREE.Scene;
+  camera: THREE.Camera;
+
+  clearColor: THREE.Color;
+  clearOpacity: number;
+
+}
+
+export
+type BeforeRenderHook = ((renderer: THREE.WebGLRenderer, options: BeforeRenderHookOptions) => void);
 
 export
 interface BlockOptions {
@@ -214,6 +227,6 @@ abstract class Block extends Events {
 
   parent: Block | null = null;
 
-  beforeRenderHook: ((renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera) => void) | null = null;
+  beforeRenderHook: BeforeRenderHook | null = null;
 
 }

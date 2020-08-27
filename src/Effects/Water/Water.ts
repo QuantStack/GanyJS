@@ -6,7 +6,7 @@ import {
 } from '../../EffectBlock';
 
 import {
-  Block, BlockOptions
+  Block, BlockOptions, BeforeRenderHookOptions
 } from '../../Block';
 
 import {
@@ -206,6 +206,9 @@ class Water extends Effect {
       nodeMesh.buildMaterial();
     }
 
+    // Target for computing the screen space refraction
+    this.screenSpaceTarget = new THREE.WebGLRenderTarget(512, 512);
+
     // Set the water color and opacity
     this.addColorNode(NodeOperation.ASSIGN, new Nodes.Vector3Node(0.45, 0.64, 0.74));
 
@@ -289,9 +292,10 @@ class Water extends Effect {
   }
 
   /**
-   * Update the caustics texture if needed.
+   * Perform extra computation before the actual rendering of the scene.
    */
-  private _beforeRenderHook (renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera): void {
+  private _beforeRenderHook (renderer: THREE.WebGLRenderer, options: BeforeRenderHookOptions): void {
+    // Update the caustics texture if needed
     if (this.causticsNeedsUpdate && this.causticsEnabled) {
       // Update environment map texture
       renderer.setRenderTarget(UnderWater.envMappingTarget);
@@ -321,6 +325,21 @@ class Water extends Effect {
 
       this.causticsNeedsUpdate = false;
     }
+
+    // Render everything but the refractive water for the screen space refraction
+    if (this.screenSpaceTarget.width != renderer.domElement.width || this.screenSpaceTarget.height != renderer.domElement.height) {
+      this.screenSpaceTarget.setSize(renderer.domElement.width, renderer.domElement.height);
+    }
+
+    renderer.setRenderTarget(this.screenSpaceTarget);
+    renderer.setClearColor(options.clearColor, options.clearOpacity);
+    renderer.clear();
+
+    this.meshes.forEach((nodeMesh: NodeMesh) => nodeMesh.mesh.visible = false);
+    renderer.render(options.scene, options.camera);
+
+    // TODO
+    // water.setEnvMapTexture(this.screenSpaceTarget.texture);
   }
 
   protected updateMatrix () {
@@ -359,6 +378,8 @@ class Water extends Effect {
   private causticsTarget: THREE.WebGLRenderTarget;
   private causticsMeshes: NodeMesh[];
   private _causticsFactor: Nodes.FloatNode = new Nodes.FloatNode(0.2);
+
+  private screenSpaceTarget: THREE.WebGLRenderTarget;
 
   private initEnvMapMaterial: THREE.ShaderMaterial;
   private initEnvMapMesh: THREE.Mesh;

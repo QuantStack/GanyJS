@@ -169,7 +169,10 @@ class Renderer {
 
     for (const block of this.scene.blocks) {
       if (block.beforeRenderHook !== null) {
-        block.beforeRenderHook(this.renderer, this.scene.scene, this.camera);
+        block.beforeRenderHook(
+          this.renderer,
+          {scene: this.scene.scene, camera: this.camera, clearColor: this.clearColor, clearOpacity: this.opacity}
+        );
       }
     }
 
