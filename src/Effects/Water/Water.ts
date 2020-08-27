@@ -209,8 +209,40 @@ class Water extends Effect {
     // Target for computing the screen space refraction
     this.screenSpaceTarget = new THREE.WebGLRenderTarget(512, 512);
 
-    // Set the water color and opacity
-    this.addColorNode(NodeOperation.ASSIGN, new Nodes.Vector3Node(0.45, 0.64, 0.74));
+    // Compute reflection and refraction on the water surface
+    const reflected = new Nodes.VarNode('vec3');
+    const reflectionFactor = new Nodes.VarNode('float');
+    const refractedPosition = new Nodes.VarNode('vec2');
+    const waterReflectionRefractionNode = new Nodes.FunctionNode(
+      `void computeReflectionRefractionFunc${this.id}(vec3 position, vec3 normal){
+        const float refractionFactor = 1.;
+
+        const float fresnelBias = 0.1;
+        const float fresnelPower = 2.;
+        const float fresnelScale = 1.;
+
+        // Air refractive index / Water refractive index
+        const float eta = 0.7504;
+
+        vec3 eye = normalize(position - cameraPosition);
+        vec3 refracted = normalize(refract(eye, normal, eta));
+        reflected = normalize(reflect(eye, normal));
+
+        reflectionFactor = fresnelBias + fresnelScale * pow(1. + dot(eye, normal), fresnelPower);
+
+        vec4 projectedRefractedPosition = projectionMatrix * modelViewMatrix * vec4(position + refractionFactor * refracted, 1.0);
+        refractedPosition = projectedRefractedPosition.xy / projectedRefractedPosition.w;
+      }`
+    );
+
+    waterReflectionRefractionNode.keywords = { reflected, reflectionFactor, refractedPosition };
+
+    const waterReflectionRefractionNodeCall = new Nodes.FunctionCallNode(
+      waterReflectionRefractionNode,
+      [new Nodes.PositionNode(Nodes.PositionNode.WORLD), new Nodes.NormalNode(Nodes.NormalNode.WORLD)]
+    );
+
+    this.addExpressionNode(waterReflectionRefractionNodeCall);
 
     // Create mesh that serves as an initializer for the environment mapping
     // So that we get meaningful values in the environment map by default
@@ -340,6 +372,8 @@ class Water extends Effect {
 
     // TODO
     // water.setEnvMapTexture(this.screenSpaceTarget.texture);
+
+    this.meshes.forEach((nodeMesh: NodeMesh) => nodeMesh.mesh.visible = true);
   }
 
   protected updateMatrix () {
