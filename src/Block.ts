@@ -214,6 +214,6 @@ abstract class Block extends Events {
 
   parent: Block | null = null;
 
-  beforeRenderHook: ((renderer: THREE.WebGLRenderer) => void) | null = null;
+  beforeRenderHook: ((renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera) => void) | null = null;
 
 }

@@ -209,9 +209,6 @@ class Water extends Effect {
     // Set the water color and opacity
     this.addColorNode(NodeOperation.ASSIGN, new Nodes.Vector3Node(0.45, 0.64, 0.74));
 
-    // This one must be an ASSIGN, when the Threshold uses a mask node instead of an AlphaNode
-    this.addAlphaNode(NodeOperation.MUL, new Nodes.FloatNode(0.7));
-
     // Create mesh that serves as an initializer for the environment mapping
     // So that we get meaningful values in the environment map by default
     this.initEnvMapMaterial = new THREE.ShaderMaterial({
@@ -294,7 +291,7 @@ class Water extends Effect {
   /**
    * Update the caustics texture if needed.
    */
-  private _beforeRenderHook (renderer: THREE.WebGLRenderer): void {
+  private _beforeRenderHook (renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera): void {
     if (this.causticsNeedsUpdate && this.causticsEnabled) {
       // Update environment map texture
       renderer.setRenderTarget(UnderWater.envMappingTarget);
