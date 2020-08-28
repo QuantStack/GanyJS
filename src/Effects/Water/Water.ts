@@ -56,6 +56,8 @@ interface WaterOptions extends BlockOptions {
 
   causticsFactor?: number;
 
+  skybox?: THREE.CubeTexture;
+
 }
 
 
@@ -72,6 +74,8 @@ class Water extends Effect {
       this.causticsEnabled = options.causticsEnabled !== undefined ? options.causticsEnabled : this.causticsEnabled;
       this.underWaterBlocks = options.underWaterBlocks !== undefined ? options.underWaterBlocks : this.underWaterBlocks;
       this._causticsFactor = options.causticsFactor !== undefined ? new Nodes.FloatNode(options.causticsFactor) : this._causticsFactor;
+      this.skybox = options.skybox !== undefined ? new Nodes.CubeTextureNode(options.skybox) : new Nodes.CubeTextureNode(new THREE.CubeTexture());
+      this.useSkyboxNode = new Nodes.FloatNode(options.skybox !== undefined ? 1 : 0);
     }
 
     // Shallow copy the water meshes for the caustics computation (Geometries are not copied, we only create new Materials using BasicNodeMaterial)
@@ -206,6 +210,14 @@ class Water extends Effect {
       nodeMesh.buildMaterial();
     }
 
+    // Create mesh that serves as an initializer for the environment mapping
+    // So that we get meaningful values in the environment map by default
+    this.initEnvMapMaterial = new THREE.ShaderMaterial({
+      vertexShader: initEnvMappingVertex,
+      fragmentShader: initEnvMappingFragment
+    });
+    this.initEnvMapMesh = new THREE.Mesh(new THREE.PlaneBufferGeometry(2, 2), this.initEnvMapMaterial);
+
     // Target for computing the screen space refraction
     this.screenSpaceTarget = new THREE.WebGLRenderTarget(512, 512);
 
@@ -244,13 +256,45 @@ class Water extends Effect {
 
     this.addExpressionNode(waterReflectionRefractionNodeCall);
 
-    // Create mesh that serves as an initializer for the environment mapping
-    // So that we get meaningful values in the environment map by default
-    this.initEnvMapMaterial = new THREE.ShaderMaterial({
-      vertexShader: initEnvMappingVertex,
-      fragmentShader: initEnvMappingFragment
-    });
-    this.initEnvMapMesh = new THREE.Mesh(new THREE.PlaneBufferGeometry(2, 2), this.initEnvMapMaterial);
+    const getWaterSurfaceColorNode1 = new Nodes.FunctionNode(
+      `vec3 getWaterSurfaceColorFunc${this.id}(sampler2D envMap, samplerCube skybox){
+        vec3 refractedColor = texture2D(envMap, refractedPosition * 0.5 + 0.5).xyz;
+        vec3 reflectedColor = textureCube(skybox, reflected).xyz;
+
+        return mix(refractedColor, reflectedColor, clamp(reflectionFactor, 0., 1.));
+      }`
+    );
+
+    getWaterSurfaceColorNode1.keywords = { reflected, reflectionFactor, refractedPosition };
+
+    const getWaterSurfaceColorNodeCall1 = new Nodes.FunctionCallNode(
+      getWaterSurfaceColorNode1,
+      [new Nodes.TextureNode(this.screenSpaceTarget.texture), this.skybox]
+    );
+
+    const getWaterSurfaceColorNode2 = new Nodes.FunctionNode(
+      `vec3 getWaterSurfaceColorFunc${this.id}(sampler2D envMap){
+        vec3 refractedColor = texture2D(envMap, refractedPosition * 0.5 + 0.5).xyz;
+        vec3 reflectedColor = vec3(0.22, 0.47, 0.77);
+
+        return mix(refractedColor, reflectedColor, clamp(reflectionFactor, 0., 1.));
+      }`
+    );
+
+    getWaterSurfaceColorNode2.keywords = { reflectionFactor, refractedPosition };
+
+    const getWaterSurfaceColorNodeCall2 = new Nodes.FunctionCallNode(
+      getWaterSurfaceColorNode2,
+      [new Nodes.TextureNode(this.screenSpaceTarget.texture)]
+    );
+
+    this.addColorNode(
+      NodeOperation.ASSIGN,
+      new Nodes.CondNode(
+        this.useSkyboxNode, new Nodes.FloatNode(1), Nodes.CondNode.EQUAL,
+        getWaterSurfaceColorNodeCall1, getWaterSurfaceColorNodeCall2
+      )
+    );
 
     this.updateLightCamera();
 
@@ -414,6 +458,8 @@ class Water extends Effect {
   private _causticsFactor: Nodes.FloatNode = new Nodes.FloatNode(0.2);
 
   private screenSpaceTarget: THREE.WebGLRenderTarget;
+  private useSkyboxNode: Nodes.FloatNode;
+  private skybox: Nodes.CubeTextureNode;
 
   private initEnvMapMaterial: THREE.ShaderMaterial;
   private initEnvMapMesh: THREE.Mesh;
