@@ -162,8 +162,7 @@ class Water extends Effect {
 
     const causticsComputationNodeCall = new Nodes.FunctionCallNode(
       causticsComputationNode,
-      // TODO Find a smarter way to have the position, this will not take Warp into account for example
-      [this.envMap, new Nodes.FloatNode(1. / UnderWater.envMapSize), new Nodes.PositionNode(), lightNode]
+      [this.envMap, new Nodes.FloatNode(1. / UnderWater.envMapSize), new Nodes.PositionNode(Nodes.PositionNode.WORLD), lightNode]
     );
 
     const causticsIntensityNode = new Nodes.FunctionNode(
