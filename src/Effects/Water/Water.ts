@@ -256,7 +256,7 @@ class Water extends Effect {
     this.addExpressionNode(waterReflectionRefractionNodeCall);
 
     const getWaterSurfaceColorNode1 = new Nodes.FunctionNode(
-      `vec3 getWaterSurfaceColorFunc${this.id}(sampler2D envMap, samplerCube skybox){
+      `vec3 getWaterSurfaceColorFunc1${this.id}(sampler2D envMap, samplerCube skybox){
         vec3 refractedColor = texture2D(envMap, refractedPosition * 0.5 + 0.5).xyz;
         vec3 reflectedColor = textureCube(skybox, reflected).xyz;
 
@@ -272,7 +272,7 @@ class Water extends Effect {
     );
 
     const getWaterSurfaceColorNode2 = new Nodes.FunctionNode(
-      `vec3 getWaterSurfaceColorFunc${this.id}(sampler2D envMap){
+      `vec3 getWaterSurfaceColorFunc2${this.id}(sampler2D envMap){
         vec3 refractedColor = texture2D(envMap, refractedPosition * 0.5 + 0.5).xyz;
         vec3 reflectedColor = vec3(0.22, 0.47, 0.77);
 
