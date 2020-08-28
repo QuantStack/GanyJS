@@ -266,9 +266,11 @@ class Water extends Effect {
 
     getWaterSurfaceColorNode1.keywords = { reflected, reflectionFactor, refractedPosition };
 
+    this.screenSpaceTargetTextureNode = new Nodes.TextureNode(this.screenSpaceTarget.texture);
+
     const getWaterSurfaceColorNodeCall1 = new Nodes.FunctionCallNode(
       getWaterSurfaceColorNode1,
-      [new Nodes.TextureNode(this.screenSpaceTarget.texture), this.skybox]
+      [this.screenSpaceTargetTextureNode, this.skybox]
     );
 
     const getWaterSurfaceColorNode2 = new Nodes.FunctionNode(
@@ -413,8 +415,7 @@ class Water extends Effect {
     this.meshes.forEach((nodeMesh: NodeMesh) => nodeMesh.mesh.visible = false);
     renderer.render(options.scene, options.camera);
 
-    // TODO
-    // water.setEnvMapTexture(this.screenSpaceTarget.texture);
+    this.screenSpaceTargetTextureNode.value = this.screenSpaceTarget.texture;
 
     this.meshes.forEach((nodeMesh: NodeMesh) => nodeMesh.mesh.visible = true);
   }
@@ -457,6 +458,7 @@ class Water extends Effect {
   private _causticsFactor: Nodes.FloatNode = new Nodes.FloatNode(0.2);
 
   private screenSpaceTarget: THREE.WebGLRenderTarget;
+  private screenSpaceTargetTextureNode: Nodes.TextureNode;
   private useSkyboxNode: Nodes.FloatNode;
   private skybox: Nodes.CubeTextureNode;
 
