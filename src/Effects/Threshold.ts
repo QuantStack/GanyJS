@@ -13,7 +13,7 @@ import {
 } from '../Data';
 
 import {
-  NodeOperation, NodeMesh
+  NodeMesh
 } from '../NodeMesh';
 
 import {
@@ -55,10 +55,11 @@ class Threshold extends Effect {
     // Returns 1 if input > min, 0 otherwise
     this.isOverMin = new Nodes.MathNode(this.minNode, this.inputNode, Nodes.MathNode.STEP);
 
-    // TODO: Use a mask node instead of an alpha node?
-    this.thresholdAlpha = new Nodes.OperatorNode(this.isUnderMax, this.isOverMin, Nodes.OperatorNode.MUL);
-
-    this.addAlphaNode(NodeOperation.MUL, this.thresholdAlpha);
+    this.addMaskNode(new Nodes.CondNode(
+      new Nodes.OperatorNode(this.isUnderMax, this.isOverMin, Nodes.OperatorNode.MUL), new Nodes.FloatNode(0),
+      Nodes.CondNode.EQUAL,
+      new Nodes.BoolNode(false), new Nodes.BoolNode(true)
+    ));
 
     // If there are tetrahedrons, compute new iso-surfaces
     if (this.parent.tetrahedronIndices != null) {
@@ -183,8 +184,6 @@ class Threshold extends Effect {
 
   private isUnderMax: Nodes.MathNode;
   private isOverMin: Nodes.MathNode;
-
-  private thresholdAlpha: Nodes.OperatorNode;
 
   private isoSurfaceUtils1: IsoSurfaceUtils;
   private isoSurfaceUtils2: IsoSurfaceUtils;

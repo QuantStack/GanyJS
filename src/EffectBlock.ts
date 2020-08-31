@@ -139,6 +139,17 @@ class Effect extends Block {
   }
 
   /**
+   * Add mask node to materials
+   */
+  addMaskNode (maskNode: Nodes.Node) {
+    for (const nodeMesh of this.meshes) {
+      nodeMesh.addMaskNode(maskNode);
+    }
+
+    this.buildMaterial();
+  }
+
+  /**
    * Add an expression node to materials
    */
   addExpressionNode (expressionNode: Nodes.Node) {

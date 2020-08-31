@@ -134,6 +134,7 @@ class NodeMesh {
     let position: NodeOperationResult<Nodes.Node> = new Nodes.PositionNode();
     let alpha: NodeOperationResult<Nodes.Node> = new Nodes.FloatNode(1.);
     let color: NodeOperationResult<Nodes.Node> = this.defaultColorNode;
+    let mask = new Nodes.BoolNode(true);
 
     for (const transformOperator of this.transformOperators) {
       position = transformOperator.operate(position);
@@ -147,6 +148,12 @@ class NodeMesh {
       alpha = alphaOperator.operate(alpha);
     }
 
+    for (const maskNode of this.maskNodes) {
+      // TODO Use a logical node? See https://github.com/mrdoob/three.js/issues/20212
+      // @ts-ignore: See https://github.com/mrdoob/three.js/pull/20213
+      mask = new Nodes.ExpressionNode('a && b', 'bool', { a: mask, b: maskNode });
+    }
+
     for (const expressionNode of this.expressionNodes) {
       position = new Nodes.BypassNode(expressionNode, position);
     }
@@ -157,6 +164,7 @@ class NodeMesh {
     this.material.position = position;
     this.material.alpha = alpha;
     this.material.color = color;
+    this.material.mask = mask;
 
     // Workaround for https://github.com/mrdoob/three.js/issues/18152
     if (this.mesh.type == 'Points' && this.material instanceof Nodes.StandardNodeMaterial) {
@@ -178,6 +186,7 @@ class NodeMesh {
     copy.transformOperators = this.transformOperators.slice();
     copy.alphaOperators = this.alphaOperators.slice();
     copy.colorOperators = this.colorOperators.slice();
+    copy.maskNodes = this.maskNodes.slice();
     copy.expressionNodes = this.expressionNodes.slice();
 
     copy.defaultColor = this.defaultColor;
@@ -189,6 +198,7 @@ class NodeMesh {
     this.transformOperators = other.transformOperators.slice();
     this.alphaOperators = other.alphaOperators.slice();
     this.colorOperators = other.colorOperators.slice();
+    this.maskNodes = other.maskNodes.slice();
     this.expressionNodes = other.expressionNodes.slice();
 
     this.defaultColor = other.defaultColor;
@@ -233,6 +243,13 @@ class NodeMesh {
    */
   addAlphaNode (operation: NodeOperation, alphaNode: Nodes.Node) {
     this.alphaOperators.push(new NodeOperator<Nodes.Node>(operation, alphaNode));
+  }
+
+  /**
+   * Add an Mask node to this mesh material
+   */
+  addMaskNode (maskNode: Nodes.Node) {
+    this.maskNodes.push(maskNode);
   }
 
   /**
@@ -329,6 +346,7 @@ class NodeMesh {
   private transformOperators: NodeOperator<Nodes.Node>[] = [];
   private alphaOperators: NodeOperator<Nodes.Node>[] = [];
   private colorOperators: NodeOperator<Nodes.Node>[] = [];
+  private maskNodes: Nodes.Node[] = [];
   private expressionNodes: Nodes.Node[] = [];
 
   private _defaultColor: THREE.Color;

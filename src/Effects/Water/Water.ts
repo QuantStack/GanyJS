@@ -6,7 +6,7 @@ import {
 } from '../../EffectBlock';
 
 import {
-  Block, BlockOptions
+  Block, BlockOptions, BeforeRenderHookOptions
 } from '../../Block';
 
 import {
@@ -56,6 +56,8 @@ interface WaterOptions extends BlockOptions {
 
   causticsFactor?: number;
 
+  skybox?: THREE.CubeTexture;
+
 }
 
 
@@ -72,10 +74,13 @@ class Water extends Effect {
       this.causticsEnabled = options.causticsEnabled !== undefined ? options.causticsEnabled : this.causticsEnabled;
       this.underWaterBlocks = options.underWaterBlocks !== undefined ? options.underWaterBlocks : this.underWaterBlocks;
       this._causticsFactor = options.causticsFactor !== undefined ? new Nodes.FloatNode(options.causticsFactor) : this._causticsFactor;
+      this.skybox = options.skybox !== undefined ? new Nodes.CubeTextureNode(options.skybox) : new Nodes.CubeTextureNode(new THREE.CubeTexture());
+      this.useSkyboxNode = new Nodes.FloatNode(options.skybox !== undefined ? 1 : 0);
     }
 
     // Shallow copy the water meshes for the caustics computation (Geometries are not copied, we only create new Materials using BasicNodeMaterial)
     this.causticsMeshes = this.meshes.map((nodeMesh: NodeMesh) => nodeMesh.copy(BasicNodeMaterial));
+    this.meshes = this.meshes.map((nodeMesh: NodeMesh) => nodeMesh.copy(BasicNodeMaterial));
 
     // Initialize the light camera
     this.light = new THREE.Vector3(0., 0., -1.);
@@ -158,7 +163,6 @@ class Water extends Effect {
 
     const causticsComputationNodeCall = new Nodes.FunctionCallNode(
       causticsComputationNode,
-      // TODO Find a smarter way to have the position, this will not take Warp into account for example
       [this.envMap, new Nodes.FloatNode(1. / UnderWater.envMapSize), new Nodes.PositionNode(), lightNode]
     );
 
@@ -206,12 +210,6 @@ class Water extends Effect {
       nodeMesh.buildMaterial();
     }
 
-    // Set the water color and opacity
-    this.addColorNode(NodeOperation.ASSIGN, new Nodes.Vector3Node(0.45, 0.64, 0.74));
-
-    // This one must be an ASSIGN, when the Threshold uses a mask node instead of an AlphaNode
-    this.addAlphaNode(NodeOperation.MUL, new Nodes.FloatNode(0.7));
-
     // Create mesh that serves as an initializer for the environment mapping
     // So that we get meaningful values in the environment map by default
     this.initEnvMapMaterial = new THREE.ShaderMaterial({
@@ -219,6 +217,88 @@ class Water extends Effect {
       fragmentShader: initEnvMappingFragment
     });
     this.initEnvMapMesh = new THREE.Mesh(new THREE.PlaneBufferGeometry(2, 2), this.initEnvMapMaterial);
+
+    // Target for computing the screen space refraction
+    this.screenSpaceTarget = new THREE.WebGLRenderTarget(512, 512);
+
+    // Compute reflection and refraction on the water surface
+    const reflected = new Nodes.VarNode('vec3');
+    const reflectionFactor = new Nodes.VarNode('float');
+    const refractedPosition = new Nodes.VarNode('vec2');
+    const waterReflectionRefractionNode = new Nodes.FunctionNode(
+      `void computeReflectionRefractionFunc${this.id}(vec3 position, vec3 normal){
+        const float refractionFactor = 1.;
+
+        const float fresnelBias = 0.1;
+        const float fresnelPower = 2.;
+        const float fresnelScale = 1.;
+
+        // Air refractive index / Water refractive index
+        const float eta = 0.7504;
+
+        vec3 wPosition = (modelMatrix * vec4(position, 1.)).xyz;
+
+        vec3 eye = normalize(wPosition - cameraPosition);
+        vec3 refracted = normalize(refract(eye, normal, eta));
+        reflected = normalize(reflect(eye, normal));
+
+        reflectionFactor = fresnelBias + fresnelScale * pow(1. + dot(eye, normal), fresnelPower);
+
+        vec4 projectedRefractedPosition = projectionMatrix * modelViewMatrix * vec4(position + refractionFactor * refracted, 1.0);
+        refractedPosition = projectedRefractedPosition.xy / projectedRefractedPosition.w;
+      }`
+    );
+
+    waterReflectionRefractionNode.keywords = { reflected, reflectionFactor, refractedPosition };
+
+    const waterReflectionRefractionNodeCall = new Nodes.FunctionCallNode(
+      waterReflectionRefractionNode,
+      [new Nodes.PositionNode(), new Nodes.NormalNode(Nodes.NormalNode.WORLD)]
+    );
+
+    this.addExpressionNode(waterReflectionRefractionNodeCall);
+
+    const getWaterSurfaceColorNode1 = new Nodes.FunctionNode(
+      `vec3 getWaterSurfaceColorFunc1${this.id}(sampler2D envMap, samplerCube skybox){
+        vec3 refractedColor = texture2D(envMap, refractedPosition * 0.5 + 0.5).xyz;
+        vec3 reflectedColor = textureCube(skybox, reflected).xyz;
+
+        return mix(refractedColor, reflectedColor, clamp(reflectionFactor, 0., 1.));
+      }`
+    );
+
+    getWaterSurfaceColorNode1.keywords = { reflected, reflectionFactor, refractedPosition };
+
+    this.screenSpaceTargetTextureNode = new Nodes.TextureNode(this.screenSpaceTarget.texture);
+
+    const getWaterSurfaceColorNodeCall1 = new Nodes.FunctionCallNode(
+      getWaterSurfaceColorNode1,
+      [this.screenSpaceTargetTextureNode, this.skybox]
+    );
+
+    const getWaterSurfaceColorNode2 = new Nodes.FunctionNode(
+      `vec3 getWaterSurfaceColorFunc2${this.id}(sampler2D envMap){
+        vec3 refractedColor = texture2D(envMap, refractedPosition * 0.5 + 0.5).xyz;
+        vec3 reflectedColor = vec3(0.22, 0.47, 0.77);
+
+        return mix(refractedColor, reflectedColor, clamp(reflectionFactor, 0., 1.));
+      }`
+    );
+
+    getWaterSurfaceColorNode2.keywords = { reflectionFactor, refractedPosition };
+
+    const getWaterSurfaceColorNodeCall2 = new Nodes.FunctionCallNode(
+      getWaterSurfaceColorNode2,
+      [new Nodes.TextureNode(this.screenSpaceTarget.texture)]
+    );
+
+    this.addColorNode(
+      NodeOperation.ASSIGN,
+      new Nodes.CondNode(
+        this.useSkyboxNode, new Nodes.FloatNode(1), Nodes.CondNode.EQUAL,
+        getWaterSurfaceColorNodeCall1, getWaterSurfaceColorNodeCall2
+      )
+    );
 
     this.updateLightCamera();
 
@@ -292,9 +372,10 @@ class Water extends Effect {
   }
 
   /**
-   * Update the caustics texture if needed.
+   * Perform extra computation before the actual rendering of the scene.
    */
-  private _beforeRenderHook (renderer: THREE.WebGLRenderer): void {
+  private _beforeRenderHook (renderer: THREE.WebGLRenderer, options: BeforeRenderHookOptions): void {
+    // Update the caustics texture if needed
     if (this.causticsNeedsUpdate && this.causticsEnabled) {
       // Update environment map texture
       renderer.setRenderTarget(UnderWater.envMappingTarget);
@@ -324,6 +405,22 @@ class Water extends Effect {
 
       this.causticsNeedsUpdate = false;
     }
+
+    // Render everything but the refractive water for the screen space refraction
+    if (this.screenSpaceTarget.width != renderer.domElement.width || this.screenSpaceTarget.height != renderer.domElement.height) {
+      this.screenSpaceTarget.setSize(renderer.domElement.width, renderer.domElement.height);
+    }
+
+    renderer.setRenderTarget(this.screenSpaceTarget);
+    renderer.setClearColor(options.clearColor, options.clearOpacity);
+    renderer.clear();
+
+    this.meshes.forEach((nodeMesh: NodeMesh) => nodeMesh.mesh.visible = false);
+    renderer.render(options.scene, options.camera);
+
+    this.screenSpaceTargetTextureNode.value = this.screenSpaceTarget.texture;
+
+    this.meshes.forEach((nodeMesh: NodeMesh) => nodeMesh.mesh.visible = true);
   }
 
   protected updateMatrix () {
@@ -362,6 +459,11 @@ class Water extends Effect {
   private causticsTarget: THREE.WebGLRenderTarget;
   private causticsMeshes: NodeMesh[];
   private _causticsFactor: Nodes.FloatNode = new Nodes.FloatNode(0.2);
+
+  private screenSpaceTarget: THREE.WebGLRenderTarget;
+  private screenSpaceTargetTextureNode: Nodes.TextureNode;
+  private useSkyboxNode: Nodes.FloatNode;
+  private skybox: Nodes.CubeTextureNode;
 
   private initEnvMapMaterial: THREE.ShaderMaterial;
   private initEnvMapMesh: THREE.Mesh;

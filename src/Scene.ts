@@ -80,8 +80,12 @@ class Renderer {
 
     // Renderer
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    this.renderer.setClearAlpha(0.);
     this.renderer.autoClear = false;
+
+    this.color = 'white';
+    this.opacity = 1;
+    this.clearColor = new THREE.Color(this.color);
+    this.renderer.setClearColor(this.clearColor, this.opacity);
 
     this.renderer.setSize(width, height);
     this.renderer.localClippingEnabled = true;
@@ -169,7 +173,10 @@ class Renderer {
 
     for (const block of this.scene.blocks) {
       if (block.beforeRenderHook !== null) {
-        block.beforeRenderHook(this.renderer);
+        block.beforeRenderHook(
+          this.renderer,
+          {scene: this.scene.scene, camera: this.camera, clearColor: this.clearColor, clearOpacity: this.opacity}
+        );
       }
     }
 

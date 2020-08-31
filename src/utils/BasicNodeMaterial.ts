@@ -18,6 +18,7 @@ class BasicNodeMaterial extends Nodes.NodeMaterial {
   color: Node;
   alpha: Node;
   position: Node;
+  mask: Node;
 
   type: string;
 
@@ -28,4 +29,5 @@ Nodes.NodeUtils.addShortcuts(BasicNodeMaterial.prototype, 'fragment', [
   'color',
   'alpha',
   'position',
+  'mask',
 ]);
