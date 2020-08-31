@@ -80,6 +80,7 @@ class Water extends Effect {
 
     // Shallow copy the water meshes for the caustics computation (Geometries are not copied, we only create new Materials using BasicNodeMaterial)
     this.causticsMeshes = this.meshes.map((nodeMesh: NodeMesh) => nodeMesh.copy(BasicNodeMaterial));
+    this.meshes = this.meshes.map((nodeMesh: NodeMesh) => nodeMesh.copy(BasicNodeMaterial));
 
     // Initialize the light camera
     this.light = new THREE.Vector3(0., 0., -1.);
@@ -162,7 +163,7 @@ class Water extends Effect {
 
     const causticsComputationNodeCall = new Nodes.FunctionCallNode(
       causticsComputationNode,
-      [this.envMap, new Nodes.FloatNode(1. / UnderWater.envMapSize), new Nodes.PositionNode(Nodes.PositionNode.WORLD), lightNode]
+      [this.envMap, new Nodes.FloatNode(1. / UnderWater.envMapSize), new Nodes.PositionNode(), lightNode]
     );
 
     const causticsIntensityNode = new Nodes.FunctionNode(
@@ -235,7 +236,9 @@ class Water extends Effect {
         // Air refractive index / Water refractive index
         const float eta = 0.7504;
 
-        vec3 eye = normalize(position - cameraPosition);
+        vec3 wPosition = (modelMatrix * vec4(position, 1.)).xyz;
+
+        vec3 eye = normalize(wPosition - cameraPosition);
         vec3 refracted = normalize(refract(eye, normal, eta));
         reflected = normalize(reflect(eye, normal));
 
@@ -250,7 +253,7 @@ class Water extends Effect {
 
     const waterReflectionRefractionNodeCall = new Nodes.FunctionCallNode(
       waterReflectionRefractionNode,
-      [new Nodes.PositionNode(Nodes.PositionNode.WORLD), new Nodes.NormalNode(Nodes.NormalNode.WORLD)]
+      [new Nodes.PositionNode(), new Nodes.NormalNode(Nodes.NormalNode.WORLD)]
     );
 
     this.addExpressionNode(waterReflectionRefractionNodeCall);
