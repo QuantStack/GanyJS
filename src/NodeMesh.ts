@@ -149,6 +149,7 @@ class NodeMesh {
     }
 
     for (const maskNode of this.maskNodes) {
+      // TODO Use a logical node? See https://github.com/mrdoob/three.js/issues/20212
       // @ts-ignore: See https://github.com/mrdoob/three.js/pull/20213
       mask = new Nodes.ExpressionNode('a && b', 'bool', { a: mask, b: maskNode });
     }
