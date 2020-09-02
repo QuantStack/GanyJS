@@ -33,6 +33,8 @@ interface UnderWaterOptions extends BlockOptions {
 
   texture?: THREE.Texture;
 
+  textureScale?: number;
+
 }
 
 
@@ -48,6 +50,7 @@ class UnderWater extends Effect {
     if (options) {
       this._defaultColor = options.defaultColor !== undefined ? options.defaultColor : this._defaultColor;
       this._texture = options.texture !== undefined ? options.texture : this._texture;
+      this._textureScale = options.textureScale !== undefined ? options.textureScale : this._textureScale;
     }
 
     // Shallow copy the meshes (Geometries are not copied, we only create new Materials)
@@ -136,7 +139,7 @@ class UnderWater extends Effect {
     // Fragment shader
     this.useTexturingNode = new Nodes.FloatNode(0);
     this.envTextureNode = new Nodes.TextureNode(new THREE.Texture());
-    this.textureScaleNode = new Nodes.FloatNode(2);
+    this.textureScaleNode = new Nodes.FloatNode(this._textureScale);
     this.defaultColorNode = new Nodes.ColorNode(this._defaultColor);
 
     const rand2 = new Nodes.FunctionNode(
@@ -300,6 +303,11 @@ class UnderWater extends Effect {
     }
   }
 
+  set textureScale (textureScale: number) {
+    this._textureScale = textureScale;
+    this.textureScaleNode.value = this._textureScale;
+  }
+
   renderEnvMap (renderer: THREE.WebGLRenderer, lightCamera: THREE.Camera) {
     for (const nodeMesh of this.envMappingMeshes) {
       renderer.render(nodeMesh.mesh, lightCamera);
@@ -343,6 +351,7 @@ class UnderWater extends Effect {
 
   private _defaultColor: THREE.Color = new THREE.Color(0.951, 1., 0.825);
   private _texture: THREE.Texture | null = null;
+  private _textureScale: number = 2;
 
   private initialized: boolean = false;
 
