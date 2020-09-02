@@ -256,7 +256,7 @@ class Water extends Effect {
       [new Nodes.PositionNode(), new Nodes.NormalNode(Nodes.NormalNode.WORLD)]
     );
 
-    this.addExpressionNode(waterReflectionRefractionNodeCall);
+    this.addVertexExpressionNode(waterReflectionRefractionNodeCall);
 
     const getWaterSurfaceColorNode1 = new Nodes.FunctionNode(
       `vec3 getWaterSurfaceColorFunc1${this.id}(sampler2D envMap, samplerCube skybox){

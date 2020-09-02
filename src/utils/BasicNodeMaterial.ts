@@ -20,6 +20,9 @@ class BasicNodeMaterial extends Nodes.NodeMaterial {
   position: Node;
   mask: Node;
 
+  vertexExpressions: Nodes.FunctionCallNode[];
+  fragmentExpressions: Nodes.FunctionCallNode[];
+
   type: string;
 
 }
@@ -30,4 +33,6 @@ Nodes.NodeUtils.addShortcuts(BasicNodeMaterial.prototype, 'fragment', [
   'alpha',
   'position',
   'mask',
+  'vertexExpressions',
+  'fragmentExpressions',
 ]);

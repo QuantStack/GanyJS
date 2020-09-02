@@ -154,10 +154,6 @@ class NodeMesh {
       mask = new Nodes.ExpressionNode('a && b', 'bool', { a: mask, b: maskNode });
     }
 
-    for (const expressionNode of this.expressionNodes) {
-      position = new Nodes.BypassNode(expressionNode, position);
-    }
-
     this.material.flatShading = true;
     this.material.side = THREE.DoubleSide;
 
@@ -165,6 +161,9 @@ class NodeMesh {
     this.material.alpha = alpha;
     this.material.color = color;
     this.material.mask = mask;
+
+    // @ts-ignore for now
+    this.material.vertexExpressions = this.vertexExpressionNodes;
 
     // Workaround for https://github.com/mrdoob/three.js/issues/18152
     if (this.mesh.type == 'Points' && this.material instanceof Nodes.StandardNodeMaterial) {
@@ -187,7 +186,7 @@ class NodeMesh {
     copy.alphaOperators = this.alphaOperators.slice();
     copy.colorOperators = this.colorOperators.slice();
     copy.maskNodes = this.maskNodes.slice();
-    copy.expressionNodes = this.expressionNodes.slice();
+    copy.vertexExpressionNodes = this.vertexExpressionNodes.slice();
 
     copy.defaultColor = this.defaultColor;
 
@@ -199,7 +198,7 @@ class NodeMesh {
     this.alphaOperators = other.alphaOperators.slice();
     this.colorOperators = other.colorOperators.slice();
     this.maskNodes = other.maskNodes.slice();
-    this.expressionNodes = other.expressionNodes.slice();
+    this.vertexExpressionNodes = other.vertexExpressionNodes.slice();
 
     this.defaultColor = other.defaultColor;
   }
@@ -255,8 +254,8 @@ class NodeMesh {
   /**
    * Add an expression node to this mesh material
    */
-  addExpressionNode (expressionNode: Nodes.Node) {
-    this.expressionNodes.push(expressionNode);
+  addVertexExpressionNode (vertexExpressionNode: Nodes.FunctionCallNode) {
+    this.vertexExpressionNodes.push(vertexExpressionNode);
   }
 
   /**
@@ -347,7 +346,7 @@ class NodeMesh {
   private alphaOperators: NodeOperator<Nodes.Node>[] = [];
   private colorOperators: NodeOperator<Nodes.Node>[] = [];
   private maskNodes: Nodes.Node[] = [];
-  private expressionNodes: Nodes.Node[] = [];
+  private vertexExpressionNodes: Nodes.FunctionCallNode[] = [];
 
   private _defaultColor: THREE.Color;
   private defaultColorNode: Nodes.ColorNode;

@@ -152,9 +152,9 @@ class Effect extends Block {
   /**
    * Add an expression node to materials
    */
-  addExpressionNode (expressionNode: Nodes.Node) {
+  addVertexExpressionNode (expressionNode: Nodes.FunctionCallNode) {
     for (const nodeMesh of this.meshes) {
-      nodeMesh.addExpressionNode(expressionNode);
+      nodeMesh.addVertexExpressionNode(expressionNode);
     }
 
     this.buildMaterial();

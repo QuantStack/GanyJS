@@ -65,10 +65,8 @@ class UnderWater extends Effect {
       `void envMappingFunc${this.id}(vec3 position){
         // Compute world position
         vec4 wPosition = modelMatrix * vec4(position, 1.);
-
         // Project vertex in the screen coordinates
         vec4 projectedPosition = projectionMatrix * viewMatrix * wPosition;
-
         // Store worldPosition and vertex depth
         worldPosition = wPosition.xyz;
         depth = projectedPosition.z;
@@ -82,13 +80,12 @@ class UnderWater extends Effect {
 
     const envMappingVertexNodeCall = new Nodes.FunctionCallNode(
       envMappingVertexNode,
-      // TODO Find a smarter way to have the position, this will not take Warp into account for example
       [new Nodes.PositionNode()]
     );
 
     for (const nodeMesh of this.envMappingMeshes) {
       // Vertex shader
-      nodeMesh.addExpressionNode(envMappingVertexNodeCall);
+      nodeMesh.addVertexExpressionNode(envMappingVertexNodeCall);
 
       // Fragment shader
       nodeMesh.addColorNode(NodeOperation.ASSIGN, worldPositionVarying);
@@ -118,7 +115,7 @@ class UnderWater extends Effect {
       [this.lightProjectionMatrixNode, this.lightViewMatrixNode, new Nodes.PositionNode()]
     );
 
-    this.addExpressionNode(setLightPositionCall);
+    this.addVertexExpressionNode(setLightPositionCall);
 
     // Texture blending
     const textureBlending = new Nodes.VarNode('vec3');
@@ -134,7 +131,7 @@ class UnderWater extends Effect {
 
     const setTextureBlendingCall = new Nodes.FunctionCallNode(setTextureBlending, [new Nodes.NormalNode(Nodes.NormalNode.WORLD)]);
 
-    this.addExpressionNode(setTextureBlendingCall);
+    this.addVertexExpressionNode(setTextureBlendingCall);
 
     // Fragment shader
     this.useTexturingNode = new Nodes.FloatNode(0);

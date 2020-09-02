@@ -30,6 +30,8 @@ class BasicNode extends Nodes.Node {
       // @ts-ignore: https://github.com/mrdoob/three.js/pull/19896
       const position: Flow | undefined = this.position ? this.position.analyzeAndFlow(builder, 'v3', { cache: 'position' }) : undefined;
 
+      const vertexExpressions: Flow[] = this.vertexExpressions.map((expr) => expr.analyzeAndFlow(builder, 'void') as Flow);
+
       // @ts-ignore
       builder.addParsCode( [
         "varying vec3 vViewPosition;",
@@ -54,6 +56,10 @@ class BasicNode extends Nodes.Node {
         "#include <begin_vertex>",
       ];
 
+      for (const expr of vertexExpressions) {
+        output.push(expr.code);
+      }
+
       if (position) {
         output.push(
           position.code,
@@ -68,6 +74,10 @@ class BasicNode extends Nodes.Node {
 
         "#include <worldpos_vertex>",
       );
+
+      for (const expr of vertexExpressions) {
+        output.push(expr.result + ';');
+      }
 
       code = output.join("\n");
     } else {
@@ -141,6 +151,9 @@ class BasicNode extends Nodes.Node {
   position: Nodes.Node | null;
   color: Nodes.Node;
   mask: Nodes.Node | null;
+
+  vertexExpressions: Nodes.FunctionCallNode[] = [];
+  fragmentExpressions: Nodes.FunctionCallNode[] = [];
 
   static nodeType: string = 'Basic';
 
