@@ -34,6 +34,7 @@ interface UnderWaterOptions extends BlockOptions {
   texture?: THREE.Texture;
 
   textureScale?: number;
+  texturePosition?: THREE.Vector3;
 
 }
 
@@ -51,6 +52,7 @@ class UnderWater extends Effect {
       this._defaultColor = options.defaultColor !== undefined ? options.defaultColor : this._defaultColor;
       this._texture = options.texture !== undefined ? options.texture : this._texture;
       this._textureScale = options.textureScale !== undefined ? options.textureScale : this._textureScale;
+      this._texturePosition = options.texturePosition !== undefined ? options.texturePosition : this._texturePosition;
     }
 
     // Shallow copy the meshes (Geometries are not copied, we only create new Materials)
@@ -139,6 +141,7 @@ class UnderWater extends Effect {
     // Fragment shader
     this.useTexturingNode = new Nodes.FloatNode(0);
     this.envTextureNode = new Nodes.TextureNode(new THREE.Texture());
+    this.texturePositionNode = new Nodes.Vector3Node(this._texturePosition.x, this._texturePosition.y, this._texturePosition.z);
     this.textureScaleNode = new Nodes.FloatNode(this._textureScale);
     this.defaultColorNode = new Nodes.ColorNode(this._defaultColor);
 
@@ -193,10 +196,12 @@ class UnderWater extends Effect {
     );
 
     const ifUsetexturing = new Nodes.FunctionNode(
-      `vec3 getTextureColor${this.id}(sampler2D envTexture, vec3 worldPosition, float scale, vec3 textureBlending){
-        vec3 xaxis = texture2D(envTexture, worldPosition.yz * scale).xyz;
-        vec3 yaxis = texture2D(envTexture, worldPosition.xz * scale).xyz;
-        vec3 zaxis = texture2D(envTexture, worldPosition.xy * scale).xyz;
+      `vec3 getTextureColor${this.id}(sampler2D envTexture, vec3 worldPosition, vec3 texturePosition, float scale, vec3 textureBlending){
+        float texScale = 1. / scale;
+
+        vec3 xaxis = texture2D(envTexture, (texturePosition.yz + worldPosition.yz) * texScale).xyz;
+        vec3 yaxis = texture2D(envTexture, (texturePosition.xz + worldPosition.xz) * texScale).xyz;
+        vec3 zaxis = texture2D(envTexture, (texturePosition.xy + worldPosition.xy) * texScale).xyz;
 
         return xaxis * textureBlending.x + yaxis * textureBlending.y + zaxis * textureBlending.z;
       }`
@@ -204,7 +209,7 @@ class UnderWater extends Effect {
 
     const ifUsetexturingCall = new Nodes.FunctionCallNode(
       ifUsetexturing,
-      [this.envTextureNode, new Nodes.PositionNode(Nodes.PositionNode.WORLD), this.textureScaleNode, textureBlending]
+      [this.envTextureNode, new Nodes.PositionNode(Nodes.PositionNode.WORLD), this.texturePositionNode, this.textureScaleNode, textureBlending]
     );
 
     const elseUsetexturing = new Nodes.FunctionNode(
@@ -308,6 +313,11 @@ class UnderWater extends Effect {
     this.textureScaleNode.value = this._textureScale;
   }
 
+  set texturePosition (texturePosition: THREE.Vector3) {
+    this._texturePosition = texturePosition;
+    this.texturePositionNode.value = this._texturePosition;
+  }
+
   renderEnvMap (renderer: THREE.WebGLRenderer, lightCamera: THREE.Camera) {
     for (const nodeMesh of this.envMappingMeshes) {
       renderer.render(nodeMesh.mesh, lightCamera);
@@ -342,6 +352,7 @@ class UnderWater extends Effect {
   private useTexturingNode: Nodes.FloatNode;
   private envTextureNode: Nodes.TextureNode;
   private textureScaleNode: Nodes.FloatNode;
+  private texturePositionNode: Nodes.Vector3Node;
   private defaultColorNode: Nodes.ColorNode;
   private causticsTextureNode: Nodes.TextureNode;
   private isUnderwaterNode: IdentityNode;
@@ -352,6 +363,7 @@ class UnderWater extends Effect {
   private _defaultColor: THREE.Color = new THREE.Color(0.951, 1., 0.825);
   private _texture: THREE.Texture | null = null;
   private _textureScale: number = 2;
+  private _texturePosition: THREE.Vector3 = new THREE.Vector3(1., 1., 0.);
 
   private initialized: boolean = false;
 
