@@ -28,6 +28,7 @@ interface ThresholdOptions extends BlockOptions {
   max?: number;
 
   dynamic?: boolean;
+  inclusive?: boolean;
 
 }
 
@@ -42,24 +43,28 @@ class Threshold extends Effect {
       this._min = options.min !== undefined ? options.min : this._min;
       this._max = options.max !== undefined ? options.max : this._max;
       this.dynamic = options.dynamic !== undefined ? options.dynamic : this.dynamic;
+      this._inclusive = options.inclusive !== undefined ? options.inclusive : this._inclusive;
     }
 
     // Create min and max float nodes
     this.minNode = new Nodes.FloatNode(this._min);
     this.maxNode = new Nodes.FloatNode(this._max);
 
-    // GLSL's STEP function is more optimized than an if statement
-    // Returns 1 if input < max, 0 otherwise
-    this.isUnderMax = new Nodes.MathNode(this.inputNode, this.maxNode, Nodes.MathNode.STEP);
+    // Show only if min < or<= input
+    this.condNode1 = new Nodes.CondNode(
+      this.minNode, this.inputNode,
+      this._inclusive ? Nodes.CondNode.LESS_EQUAL : Nodes.CondNode.LESS,
+      new Nodes.BoolNode(true), new Nodes.BoolNode(false)
+    );
+    this.addMaskNode(this.condNode1);
 
-    // Returns 1 if input > min, 0 otherwise
-    this.isOverMin = new Nodes.MathNode(this.minNode, this.inputNode, Nodes.MathNode.STEP);
-
-    this.addMaskNode(new Nodes.CondNode(
-      new Nodes.OperatorNode(this.isUnderMax, this.isOverMin, Nodes.OperatorNode.MUL), new Nodes.FloatNode(0),
-      Nodes.CondNode.EQUAL,
-      new Nodes.BoolNode(false), new Nodes.BoolNode(true)
-    ));
+    // Show only if input < or<= max
+    this.condNode2 = new Nodes.CondNode(
+      this.inputNode, this.maxNode,
+      this._inclusive ? Nodes.CondNode.LESS_EQUAL : Nodes.CondNode.LESS,
+      new Nodes.BoolNode(true), new Nodes.BoolNode(false)
+    );
+    this.addMaskNode(this.condNode2);
 
     // If there are tetrahedrons, compute new iso-surfaces
     if (this.parent.tetrahedronIndices != null) {
@@ -91,7 +96,6 @@ class Threshold extends Effect {
     }
 
     this.buildMaterial();
-
 
     this.initialized = true;
   }
@@ -168,6 +172,12 @@ class Threshold extends Effect {
     return this._max;
   }
 
+  set inclusive (value: boolean) {
+    const op = this._inclusive ? Nodes.CondNode.LESS_EQUAL : Nodes.CondNode.LESS;
+    this.condNode1.op = op;
+    this.condNode2.op = op;
+  }
+
   get inputDimension () : InputDimension {
     return 1;
   }
@@ -178,9 +188,12 @@ class Threshold extends Effect {
   private _max: number = 1;
 
   private dynamic: boolean = false;
+  private _inclusive: boolean = true;
 
   private minNode: Nodes.FloatNode;
   private maxNode: Nodes.FloatNode;
+  private condNode1: Nodes.CondNode;
+  private condNode2: Nodes.CondNode;
 
   private isUnderMax: Nodes.MathNode;
   private isOverMin: Nodes.MathNode;
