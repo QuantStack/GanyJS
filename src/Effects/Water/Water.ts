@@ -116,7 +116,13 @@ class Water extends Effect {
         vec2 currentPosition = projectedWaterPosition.xy;
         vec2 coords = 0.5 + 0.5 * currentPosition;
 
-        vec3 refracted = refract(light, normal, eta);
+        // Workaround wrong normal
+        vec3 norm = normal;
+        if (dot(light, normal) > 0.) {
+          norm = - normal;
+        }
+
+        vec3 refracted = refract(light, norm, eta);
         vec4 projectedRefractionVector = projectionMatrix * viewMatrix * vec4(refracted, 1.);
 
         vec3 refractedDirection = projectedRefractionVector.xyz;
@@ -239,10 +245,17 @@ class Water extends Effect {
         vec3 wPosition = (modelMatrix * vec4(position, 1.)).xyz;
 
         vec3 eye = normalize(wPosition - cameraPosition);
-        vec3 refracted = normalize(refract(eye, normal, eta));
-        reflected = normalize(reflect(eye, normal));
 
-        reflectionFactor = fresnelBias + fresnelScale * pow(1. + dot(eye, normal), fresnelPower);
+        // Workaround wrong normal
+        vec3 norm = normal;
+        if (dot(eye, normal) > 0.) {
+          norm = - normal;
+        }
+
+        vec3 refracted = normalize(refract(eye, norm, eta));
+        reflected = normalize(reflect(eye, norm));
+
+        reflectionFactor = fresnelBias + fresnelScale * pow(1. + dot(eye, norm), fresnelPower);
 
         vec4 projectedRefractedPosition = projectionMatrix * modelViewMatrix * vec4(position + refractionFactor * refracted, 1.0);
         refractedPosition = projectedRefractedPosition.xy / projectedRefractedPosition.w;
