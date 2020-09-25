@@ -87,6 +87,10 @@ class Effect extends Block {
     }
     // List of components is given, verify components length
     else {
+      if (typeof input == 'number' && this.inputDimension == 1) {
+        input = [input];
+      }
+
       if (input.length != this.inputDimension) {
         throw 'This effect needs ${this.inputDimension} component(s) as input, but ${input} was given';
       }
