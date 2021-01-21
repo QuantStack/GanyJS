@@ -8,6 +8,10 @@ on:
     branches:
     - master
 
+defaults:
+  run:
+    shell: bash -l {0}
+
 jobs:
   run:
     runs-on: ${{ matrix.os }}
@@ -17,19 +21,18 @@ jobs:
       matrix:
         os: [ubuntu-latest]
 
-    steps:
     - name: Checkout
       uses: actions/checkout@v2
 
     - name: Setup conda
-      uses: s-weigand/setup-conda@v1
+      uses: conda-incubator/setup-miniconda@v2
       with:
-        auto-update-conda: true
-        update-conda: true
-        conda-channels: conda-forge
+        python-version: ${{ matrix.python-version }}
+        mamba-version: "*"
+        channels: conda-forge
 
-    - name: Conda install dependencies
-      run: conda install nodejs
+    - name: Mamba install dependencies
+      run: mamba install yarn
 
     - name: Test install
-      run: npm install && npm run build
+      run: yarn install && yarn run build
