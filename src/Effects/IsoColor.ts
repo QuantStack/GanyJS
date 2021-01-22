@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import * as Nodes from 'three/examples/jsm/nodes/Nodes';
 
+const d3Format = require('d3-format');
+
 import {
   Effect, Input, InputDimension
 } from '../EffectBlock';
@@ -18,27 +20,25 @@ import {
 } from '../NodeMesh';
 
 import {
-  getColorMapTexture
+  ScaleType, getColorMapTexture, getColorInterpolator, getColorBar, updateColorBar
 } from '../utils/colormaps';
 
 
 export
 class IsoColor extends Effect {
 
-  constructor (parent: Block, input: Input, min: number, max: number, colorMap: string = 'Viridis') {
+  constructor (parent: Block, input: Input, min: number, max: number, colorMap: string = 'Viridis', type: ScaleType = ScaleType.linear) {
     super(parent, input);
 
-    this.texture = getColorMapTexture(colorMap);
+    this.format = d3Format.format('.2e');
+    this._type = type;
+    this.colorInterpolator = getColorInterpolator(colorMap);
+    this.colorBar = getColorBar(this.colorInterpolator, [min, max], type, this.format);
+    this.texture = getColorMapTexture(this.colorInterpolator);
 
     this.textureNode = new Nodes.TextureNode(this.texture);
 
-    const functionNode = new Nodes.FunctionNode(
-      `vec3 isoColorFunc${this.id}(sampler2D textureMap, float min, float max, float data){
-        vec2 colorPosition = vec2((data - min) / (max - min), 0.0);
-
-        return vec3(texture2D(textureMap, colorPosition));
-      }`
-    );
+    const functionNode = this.getFunctionNode();
 
     this.minNode = new Nodes.FloatNode(min);
     this.maxNode = new Nodes.FloatNode(max);
@@ -68,7 +68,10 @@ class IsoColor extends Effect {
   }
 
   set min (value: number) {
+    updateColorBar(this.colorBar, this.colorInterpolator, [value, this.maxNode.value], this._type, this.format);
     this.minNode.value = value;
+
+    this.trigger('change:colorbar');
   }
 
   get min () {
@@ -76,7 +79,10 @@ class IsoColor extends Effect {
   }
 
   set max (value: number) {
+    updateColorBar(this.colorBar, this.colorInterpolator, [this.minNode.value, value], this._type, this.format);
     this.maxNode.value = value;
+
+    this.trigger('change:colorbar');
   }
 
   get max () {
@@ -88,13 +94,56 @@ class IsoColor extends Effect {
   }
 
   set colorMap (colorMap: string) {
-    this.texture = getColorMapTexture(colorMap);
+    this.colorInterpolator = getColorInterpolator(colorMap);
+    updateColorBar(this.colorBar, this.colorInterpolator, [this.minNode.value, this.maxNode.value], this._type, this.format);
+    this.texture = getColorMapTexture(this.colorInterpolator);
     this.textureNode.value = this.texture;
+
+    this.trigger('change:colorbar');
   }
+
+  set type (type: ScaleType) {
+    this._type = type;
+
+    updateColorBar(this.colorBar, this.colorInterpolator, [this.minNode.value, this.maxNode.value], this._type, this.format);
+
+    const functionNode = this.getFunctionNode();
+    this.functionCallNode.setFunction(functionNode, [this.textureNode, this.minNode, this.maxNode, this.inputNode]);
+
+    this.buildMaterial();
+
+    this.trigger('change:colorbar');
+  }
+
+  private getFunctionNode () {
+    if (this._type == ScaleType.linear) {
+      return new Nodes.FunctionNode(
+        `vec3 isoColorFunc${this.id}(sampler2D textureMap, float min, float max, float data){
+          vec2 colorPosition = vec2((data - min) / (max - min), 0.0);
+
+          return vec3(texture2D(textureMap, colorPosition));
+        }`
+      );
+    } else {
+      return new Nodes.FunctionNode(
+        `vec3 isoColorFunc${this.id}(sampler2D textureMap, float min, float max, float data){
+          vec2 colorPosition = vec2((log(data) - log(min)) / (log(max) - log(min)), 0.0);
+
+          return vec3(texture2D(textureMap, colorPosition));
+        }`
+      );
+    }
+  }
+
+  colorBar: HTMLCanvasElement;
 
   private initialized: boolean = false;
 
   private functionCallNode: Nodes.FunctionCallNode;
+
+  private colorInterpolator: (v: number) => string;
+  private format: (v: number) => string;
+  private _type: ScaleType;
 
   private minNode: Nodes.FloatNode;
   private maxNode: Nodes.FloatNode;

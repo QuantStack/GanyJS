@@ -2,7 +2,6 @@ import * as THREE from 'three';
 
 const d3Color = require('d3-color');
 const d3Chromatic = require('d3-scale-chromatic');
-const d3Scale = require('d3-scale');
 
 
 const colormapsInterpolators: { [name: string]: any } = {
@@ -48,14 +47,24 @@ const colormapsInterpolators: { [name: string]: any } = {
 
 
 export
-function getColorMapTexture (colorMapName: string): THREE.DataTexture {
-  // Add support for log scales scaleSequentialLog
-  const colorScale = d3Scale.scaleSequential(colormapsInterpolators[colorMapName]);
+enum ScaleType {
+  linear='linear',
+  log='log',
+}
 
+
+export
+function getColorInterpolator (colorMapName: string): (v: number) => string {
+  return colormapsInterpolators[colorMapName];
+}
+
+
+export
+function getColorMapTexture (colorInterpolator: (value: number) => string): THREE.DataTexture {
   const nColors = 1024;
   const colorsArray = new Uint8Array(nColors * 3);
   for (let i = 0; i < nColors; i++) {
-    const color = d3Color.color(colorScale(i / (nColors - 1)));
+    const color = d3Color.color(colorInterpolator(i / (nColors - 1)));
 
     const colorIndex = 3 * i;
 
@@ -65,4 +74,104 @@ function getColorMapTexture (colorMapName: string): THREE.DataTexture {
   }
 
   return new THREE.DataTexture(colorsArray, nColors, 1, THREE.RGBFormat);
+}
+
+
+export
+function getColorBar (
+    colorInterpolator: (v: number) => string,
+    range: number[],
+    type: ScaleType,
+    format: (v: number) => string): HTMLCanvasElement {
+  const canvas = document.createElement('canvas');
+
+  updateColorBar(canvas, colorInterpolator, range, type, format);
+
+  return canvas;
+}
+
+
+export
+function updateColorBar (
+    canvas: HTMLCanvasElement,
+    colorInterpolator: (v: number) => string,
+    range: number[],
+    type: ScaleType,
+    format: (v: number) => string): void {
+  const ctx = canvas.getContext('2d');
+
+  const width = 1024;
+
+  canvas.width = width;
+  canvas.height = 100;
+
+  if (ctx === null) {
+    throw 'Failed to create canvas context for the colorbar';
+  }
+
+  ctx.save();
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle = 'black';
+  ctx.font = '35px Open Sans';
+
+  ctx.textAlign = 'start'
+  ctx.fillText(format(range[0]), 0, 100);
+
+  ctx.textAlign = 'center';
+  if (type == ScaleType.linear) {
+    ctx.fillText(format(range[1] + (range[0] - range[1]) * 0.75), width / 4, 100);
+    ctx.fillText(format(range[1] + (range[0] - range[1]) * 0.5), width / 2, 100);
+    ctx.fillText(format(range[1] + (range[0] - range[1]) * 0.25), width * 3 / 4, 100);
+  } else {
+    ctx.fillText(format(Math.pow(Math.E, (Math.log(range[0])+(Math.log(range[1])-Math.log(range[0]))*0.25))), width / 4, 100);
+    ctx.fillText(format(Math.pow(Math.E, (Math.log(range[0])+(Math.log(range[1])-Math.log(range[0]))*0.5))), width / 2, 100);
+    ctx.fillText(format(Math.pow(Math.E, (Math.log(range[0])+(Math.log(range[1])-Math.log(range[0]))*0.75))), width * 3 / 4, 100);
+  }
+
+  ctx.textAlign = 'end'
+  ctx.fillText(format(range[1]), width, 100);
+
+  for (let i = 0; i < width; ++i) {
+    ctx.fillStyle = colorInterpolator(i / (width - 1));
+    ctx.fillRect(i, 0, 1, 60);
+  }
+
+  // Draw outline and tick lines
+  ctx.lineWidth = 4;
+  ctx.fillStyle = 'black';
+  ctx.strokeRect(0, 0, width, 60);
+
+  ctx.beginPath();
+  ctx.moveTo(0, 52);
+  ctx.lineTo(0, 68);
+  ctx.closePath();
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(width / 4, 52);
+  ctx.lineTo(width / 4, 68);
+  ctx.closePath();
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(width / 2, 52);
+  ctx.lineTo(width / 2, 68);
+  ctx.closePath();
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(width * 3 / 4, 52);
+  ctx.lineTo(width * 3 / 4, 68);
+  ctx.closePath();
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(width, 52);
+  ctx.lineTo(width, 68);
+  ctx.closePath();
+  ctx.stroke();
+
+  ctx.restore();
 }
