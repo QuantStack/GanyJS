@@ -18,13 +18,12 @@ class Scene {
   constructor () {
     this.scene = new THREE.Scene();
 
-    // light
-    const ambientLight = new THREE.AmbientLight(0xffffff, 1);
+    // lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
     this.scene.add(ambientLight);
 
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.3);
-    directionalLight.position.set(0., 0., 1);
-    this.scene.add(directionalLight);
+    this.directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+    this.scene.add(this.directionalLight);
   }
 
   /**
@@ -33,6 +32,10 @@ class Scene {
   addBlock (block: Block) {
     this.blocks.push(block);
     block.addToScene(this.scene);
+  }
+
+  handleCameraMove (cameraPosition: THREE.Vector3) {
+    this.directionalLight.position.set(cameraPosition.x, cameraPosition.y, cameraPosition.z);
   }
 
   handleCameraMoveEnd (cameraPosition: THREE.Vector3) {
@@ -51,6 +54,8 @@ class Scene {
 
   scene: THREE.Scene;
   blocks: Block[] = [];
+
+  private directionalLight: THREE.DirectionalLight;
 
 }
 
@@ -106,7 +111,10 @@ class Renderer {
     this.controls.panSpeed = 0.9;
     this.controls.dynamicDampingFactor = 0.9;
 
+    this.controls.addEventListener('change', this.handleCameraMove.bind(this));
     this.controls.addEventListener('end', this.handleCameraMoveEnd.bind(this));
+
+    this.handleCameraMove();
 
     this.animate();
   }
@@ -187,6 +195,10 @@ class Renderer {
     this.renderer.render(this.scene.scene, this.camera);
 
     this.controls.update();
+  }
+
+  handleCameraMove () {
+    this.scene.handleCameraMove(this.camera.position);
   }
 
   handleCameraMoveEnd () {
