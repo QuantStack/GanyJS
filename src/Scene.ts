@@ -34,8 +34,9 @@ class Scene {
     block.addToScene(this.scene);
   }
 
-  handleCameraMove (cameraPosition: THREE.Vector3) {
+  handleCameraMove (cameraPosition: THREE.Vector3, cameraTarget: THREE.Vector3) {
     this.directionalLight.position.set(cameraPosition.x, cameraPosition.y, cameraPosition.z);
+    this.directionalLight.target.position.set(cameraTarget.x, cameraTarget.y, cameraTarget.z);
   }
 
   handleCameraMoveEnd (cameraPosition: THREE.Vector3) {
@@ -198,7 +199,7 @@ class Renderer {
   }
 
   handleCameraMove () {
-    this.scene.handleCameraMove(this.camera.position);
+    this.scene.handleCameraMove(this.camera.position, this.cameraTarget);
   }
 
   handleCameraMoveEnd () {
