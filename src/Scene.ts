@@ -158,12 +158,12 @@ class Renderer {
     return this.camera.position;
   }
 
-  set cameraUp (position: THREE.Vector3) {
-    this.camera.up.set(position.x, position.y, position.z);
+  set cameraRotation (rotation: THREE.Quaternion) {
+    this.camera.quaternion.set(rotation.x, rotation.y, rotation.z, rotation.w);
   }
 
-  get cameraUp () {
-    return this.camera.up;
+  get cameraRotation () : THREE.Quaternion {
+    return this.camera.quaternion;
   }
 
   set cameraTarget (position: THREE.Vector3) {
@@ -172,6 +172,14 @@ class Renderer {
 
   get cameraTarget () {
     return this.controls.target;
+  }
+
+  set cameraUp (up: THREE.Vector3) {
+    this.camera.up.set(up.x, up.y, up.z);
+  }
+
+  get cameraUp () {
+    return this.camera.up;
   }
 
   /**
@@ -199,7 +207,7 @@ class Renderer {
   }
 
   handleCameraMove () {
-    this.scene.handleCameraMove(this.camera.position, this.cameraTarget);
+    this.scene.handleCameraMove(this.camera.position, this.controls.target);
   }
 
   handleCameraMoveEnd () {
