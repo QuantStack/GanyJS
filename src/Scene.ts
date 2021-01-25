@@ -163,7 +163,7 @@ class Renderer {
   }
 
   get cameraUp () {
-    return this.camera.position;
+    return this.camera.up;
   }
 
   set cameraTarget (position: THREE.Vector3) {
