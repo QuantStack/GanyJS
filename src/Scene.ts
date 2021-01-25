@@ -84,7 +84,7 @@ class Renderer {
     this.camera.position.z = 2;
 
     // Renderer
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, logarithmicDepthBuffer: true });
     this.renderer.autoClear = false;
 
     this.color = 'white';
