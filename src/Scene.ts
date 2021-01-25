@@ -79,7 +79,7 @@ class Renderer {
       50,
       width / height,
       0.001,
-      999999999
+      99999
     );
     this.camera.position.z = 2;
 
