@@ -30,7 +30,7 @@
   "dependencies": {
     "backbone": "^1.4.0",
     "binary-search-tree": "^0.2.6",
-    "d3-color": "^1.4.0",
+    "d3-color": "^3.1.0",
     "d3-format": "^2.0.0",
     "d3-interpolate": "^1.4.0",
     "d3-scale": "^3.2.1",
